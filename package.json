@@ -1,0 +1,47 @@
+{
+  "name": "tesvik360",
+  "version": "1.0.0",
+  "description": "Teşvik360 - Çok platformlu teşvik yönetim sistemi",
+  "private": true,
+  "workspaces": [
+    "web",
+    "mobile",
+    "backend",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:web\"",
+    "dev:web": "npm run dev --workspace=web",
+    "dev:mobile": "npm run start --workspace=mobile",
+    "dev:backend": "npm run dev --workspace=backend",
+    "build": "npm run build --workspaces",
+    "build:web": "npm run build --workspace=web",
+    "build:mobile": "npm run build --workspace=mobile",
+    "build:backend": "npm run build --workspace=backend",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "clean": "npm run clean --workspaces",
+    "install:all": "npm install && npm install --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prettier": "^3.0.3",
+    "eslint": "^8.50.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "keywords": [
+    "tesvik",
+    "incentive",
+    "management",
+    "react",
+    "react-native",
+    "nodejs",
+    "postgresql",
+    "cross-platform"
+  ],
+  "author": "Teşvik360 Team",
+  "license": "MIT"
+}

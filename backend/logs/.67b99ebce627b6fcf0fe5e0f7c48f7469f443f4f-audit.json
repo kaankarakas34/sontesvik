@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "C:\\Users\\murat\\OneDrive\\Desktop\\tesvik2\\tesvik5\\backend\\logs\\.67b99ebce627b6fcf0fe5e0f7c48f7469f443f4f-audit.json",
+    "files": [
+        {
+            "date": 1759492150330,
+            "name": "C:\\Users\\murat\\OneDrive\\Desktop\\tesvik2\\tesvik5\\backend\\logs\\rejections-2025-10-03.log",
+            "hash": "981c0697462a3ff8e30f9637301c9e73cdee9ec2731c5ef8b93830de9bf88b16"
+        }
+    ],
+    "hashType": "sha256"
+}

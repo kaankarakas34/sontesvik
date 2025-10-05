@@ -1,0 +1,25 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "C:\\Users\\murat\\OneDrive\\Desktop\\tesvik5\\backend\\logs\\.4742cc7f89978b9645eb671c33bc89a1c4e7ab3d-audit.json",
+    "files": [
+        {
+            "date": 1759512476633,
+            "name": "C:\\Users\\murat\\OneDrive\\Desktop\\tesvik5\\backend\\logs\\error-2025-10-03.log",
+            "hash": "32a36700ca7b52d7ec2928a8c3aeb4a70f5dddcad2a9c83c702474c4f2337fa5"
+        },
+        {
+            "date": 1759573443392,
+            "name": "C:\\Users\\murat\\OneDrive\\Desktop\\tesvik5\\backend\\logs\\error-2025-10-04.log",
+            "hash": "3055ef6ffa6a8304f714eec2a30b5805117b4cf668dd9b19a7df0304dce4d0bc"
+        },
+        {
+            "date": 1759612193801,
+            "name": "C:\\Users\\murat\\OneDrive\\Desktop\\tesvik5\\backend\\logs\\error-2025-10-05.log",
+            "hash": "64b19910469f41c237486d956106845f2b1bdaabffbd3138f28f10622827bc6d"
+        }
+    ],
+    "hashType": "sha256"
+}
