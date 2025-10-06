@@ -226,6 +226,7 @@ module.exports = (sequelize) => {
       field: 'consultant_review'
     }
   }, {
+    tableName: 'Applications',
     timestamps: true,
     paranoid: true,
     underscored: true,

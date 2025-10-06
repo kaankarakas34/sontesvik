@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RootState } from '../../store';
@@ -32,6 +33,7 @@ const DashboardPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCard, setActiveCard] = useState<number | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -214,7 +216,7 @@ const DashboardPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-900">
       {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
         <motion.div
           animate={{
             x: [0, 100, 0],
@@ -578,9 +580,9 @@ const DashboardPage: React.FC = () => {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {[
-              { title: 'Kullanıcı Yönetimi', icon: UsersIcon, color: 'from-red-500 to-red-600' },
-              { title: 'Başvuru Yönetimi', icon: DocumentTextIcon, color: 'from-red-600 to-red-700' },
-              { title: 'Teşvik Yönetimi', icon: TrophyIcon, color: 'from-red-700 to-red-800' }
+              { title: 'Kullanıcı Yönetimi', icon: UsersIcon, color: 'from-red-500 to-red-600', path: '/admin/users' },
+              { title: 'Başvuru Yönetimi', icon: DocumentTextIcon, color: 'from-red-600 to-red-700', path: '/admin/applications' },
+              { title: 'Teşvik Yönetimi', icon: TrophyIcon, color: 'from-red-700 to-red-800', path: '/admin/incentives' }
             ].map((action, index) => (
               <motion.button
                 key={action.title}
@@ -589,7 +591,8 @@ const DashboardPage: React.FC = () => {
                 transition={{ delay: 1.7 + index * 0.1 }}
                 whileHover={{ scale: 1.05, y: -5 }}
                 whileTap={{ scale: 0.95 }}
-                className="flex items-center justify-center p-4 sm:p-6 bg-gradient-to-r from-white to-gray-50 rounded-xl border border-gray-200 hover:border-red-300 transition-all duration-300 group"
+                onClick={() => action.path && navigate(action.path)}
+                className="flex items-center justify-center p-4 sm:p-6 bg-gradient-to-r from-white to-gray-50 rounded-xl border border-gray-200 hover:border-red-300 transition-all duration-300 group cursor-pointer"
               >
                 <motion.div
                   whileHover={{ rotate: 360 }}

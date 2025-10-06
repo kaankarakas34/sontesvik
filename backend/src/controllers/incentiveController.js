@@ -134,13 +134,13 @@ const getIncentives = async (req, res) => {
       sectorId,
       sector,
       incentiveType,
-      status = 'active',
+      status,
       sortBy = 'createdAt',
       sortOrder = 'DESC'
     } = req.query;
 
     const offset = (page - 1) * limit;
-    const where = { status: 'active' };
+    const where = {};
 
     // Apply filters
     if (search) {
@@ -182,12 +182,22 @@ const getIncentives = async (req, res) => {
     if (incentiveType) {
       where.incentiveType = incentiveType;
     }
+    if (status) {
+      where.status = status;
+    }
 
     const { count, rows: incentives } = await Incentive.findAndCountAll({
       where,
       limit: parseInt(limit),
       offset,
-      order: [[sortBy, sortOrder.toUpperCase()]]
+      order: [[sortBy, sortOrder.toUpperCase()]],
+      include: [
+        {
+          model: Sector,
+          as: 'sector',
+          attributes: ['id', 'name', 'code']
+        }
+      ]
     });
 
     res.json({
@@ -221,6 +231,11 @@ const getIncentiveById = async (req, res) => {
 
     const incentive = await Incentive.findByPk(id, {
       include: [
+        {
+          model: Sector,
+          as: 'sector',
+          attributes: ['id', 'name', 'code']
+        },
         {
           model: IncentiveType,
           as: 'incentiveTypeModel',
@@ -267,6 +282,11 @@ const createIncentive = async (req, res) => {
 
     const incentive = await Incentive.create(incentiveData);
 
+    // Set single sector via FK if provided
+    if (req.body.sector_id || req.body.sectorId) {
+      await incentive.update({ sectorId: req.body.sector_id || req.body.sectorId });
+    }
+
     const createdIncentive = await Incentive.findByPk(incentive.id, {
       include: [
         {
@@ -279,11 +299,7 @@ const createIncentive = async (req, res) => {
           as: 'incentiveTypeModel',
           attributes: ['id', 'name', 'description']
         },
-        {
-          model: IncentiveCategory,
-          as: 'category',
-          attributes: ['id', 'name', 'description']
-        }
+        
       ]
     });
 
@@ -320,6 +336,11 @@ const updateIncentive = async (req, res) => {
       updatedBy: req.user.id
     });
 
+    // Update single sector via FK if provided
+    if (req.body.sector_id || req.body.sectorId) {
+      await incentive.update({ sectorId: req.body.sector_id || req.body.sectorId });
+    }
+
     const updatedIncentive = await Incentive.findByPk(id, {
       include: [
         {
@@ -332,11 +353,7 @@ const updateIncentive = async (req, res) => {
           as: 'incentiveTypeModel',
           attributes: ['id', 'name', 'description']
         },
-        {
-          model: IncentiveCategory,
-          as: 'category',
-          attributes: ['id', 'name', 'description']
-        }
+        
       ]
     });
 

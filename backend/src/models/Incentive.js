@@ -21,6 +21,7 @@ module.exports = (sequelize) => {
     incentiveType: {
       type: DataTypes.ENUM('grant', 'loan', 'tax_exemption', 'support'),
       allowNull: false,
+      defaultValue: 'grant',
       field: 'incentive_type',
       validate: {
         isIn: {
@@ -42,11 +43,13 @@ module.exports = (sequelize) => {
     },
     provider: {
       type: DataTypes.STRING(150),
-      allowNull: false
+      allowNull: false,
+      defaultValue: 'Unknown'
     },
     providerType: {
       type: DataTypes.ENUM('government', 'private', 'ngo', 'international'),
       allowNull: false,
+      defaultValue: 'government',
       field: 'provider_type',
       validate: {
         isIn: {
@@ -133,12 +136,18 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING(100),
       allowNull: false,
       defaultValue: 'Turkey'
+    },
+    // Single-sector relation via FK
+    sectorId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'sector_id'
     }
   }, {
     timestamps: true,
     paranoid: true,
     underscored: true,
-    tableName: 'incentives',
+    tableName: 'Incentives',
     indexes: [
       {
         fields: ['status']
@@ -159,10 +168,10 @@ module.exports = (sequelize) => {
   });
 
   Incentive.associate = function(models) {
-    Incentive.belongsToMany(models.Sector, {
-      through: 'SectorIncentive',
-      foreignKey: 'incentive_id',
-      otherKey: 'sector_id'
+    // Single sector relation
+    Incentive.belongsTo(models.Sector, {
+      foreignKey: 'sector_id',
+      as: 'sector'
     });
     
     Incentive.hasOne(models.IncentiveGuide, {
@@ -174,6 +183,12 @@ module.exports = (sequelize) => {
     Incentive.hasMany(models.Application, {
       foreignKey: 'incentiveId',
       as: 'applications'
+    });
+
+    // Relation: IncentiveType
+    Incentive.belongsTo(models.IncentiveType, {
+      foreignKey: 'incentive_type_id',
+      as: 'incentiveTypeModel'
     });
   };
 

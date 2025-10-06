@@ -6,7 +6,7 @@ module.exports = {
     // and ensuring they cannot be soft deleted
     await queryInterface.sequelize.query(`
       UPDATE users 
-      SET is_approved = true, status = 'active', deleted_at = NULL
+      SET is_approved = true, deleted_at = NULL
       WHERE role = 'company' AND deleted_at IS NOT NULL
     `);
 

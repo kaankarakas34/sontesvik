@@ -2,8 +2,8 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Create IncentiveGuides table
-    await queryInterface.createTable('IncentiveGuides', {
+    // Create incentive_guides table (snake_case to match model/tableName)
+    await queryInterface.createTable('incentive_guides', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -133,20 +133,20 @@ module.exports = {
     });
 
     // Add indexes
-    await queryInterface.addIndex('IncentiveGuides', ['incentive_id'], {
+    await queryInterface.addIndex('incentive_guides', ['incentive_id'], {
       name: 'incentive_guides_incentive_id_idx'
     });
     
-    await queryInterface.addIndex('IncentiveGuides', ['is_active'], {
+    await queryInterface.addIndex('incentive_guides', ['is_active'], {
       name: 'incentive_guides_is_active_idx'
     });
     
-    await queryInterface.addIndex('IncentiveGuides', ['published_at'], {
+    await queryInterface.addIndex('incentive_guides', ['published_at'], {
       name: 'incentive_guides_published_at_idx'
     });
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('IncentiveGuides');
+    await queryInterface.dropTable('incentive_guides');
   }
 };

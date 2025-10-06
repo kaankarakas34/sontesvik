@@ -20,7 +20,7 @@ module.exports = {
 
       // Get the first sector to use as default
       const [sectors] = await queryInterface.sequelize.query(
-        'SELECT id FROM "Sectors" ORDER BY "sortOrder" ASC LIMIT 1'
+        'SELECT id FROM "Sectors" ORDER BY "sort_order" ASC LIMIT 1'
       );
 
       if (sectors.length > 0) {

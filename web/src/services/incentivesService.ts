@@ -19,6 +19,11 @@ export interface IncentiveFormData {
   currency?: string;
   category?: string;
   isActive?: boolean;
+  // Required by backend model
+  incentiveType: 'grant' | 'loan' | 'tax_exemption' | 'support';
+  provider: string;
+  providerType: 'government' | 'private' | 'ngo' | 'international';
+  status?: 'planned' | 'active' | 'inactive' | 'expired';
 }
 
 export interface IncentiveResponse {

@@ -164,14 +164,54 @@ module.exports = {
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('Applications', ['status']);
-    await queryInterface.addIndex('Applications', ['priority']);
-    await queryInterface.addIndex('Applications', ['user_id']);
-    await queryInterface.addIndex('Applications', ['incentive_id']);
-    await queryInterface.addIndex('Applications', ['application_number']);
-    await queryInterface.addIndex('Applications', ['submitted_at']);
-    await queryInterface.addIndex('Applications', ['created_at']);
+    // Ensure required columns exist when table already existed without them
+    let table = await queryInterface.describeTable('Applications');
+    // Ensure status enum type exists (already created above)
+    if (!table.status) {
+      await queryInterface.addColumn('Applications', 'status', {
+        type: Sequelize.ENUM('draft', 'submitted', 'under_review', 'approved', 'rejected', 'cancelled'),
+        allowNull: false,
+        defaultValue: 'draft'
+      });
+    }
+    // Ensure priority column exists (older schema may not have it)
+    if (!table.priority) {
+      await queryInterface.addColumn('Applications', 'priority', {
+        type: Sequelize.ENUM('low', 'medium', 'high', 'urgent'),
+        allowNull: false,
+        defaultValue: 'medium'
+      });
+    }
+
+    // Ensure application_number column exists (older schema may not have it)
+    if (!table.application_number) {
+      await queryInterface.addColumn('Applications', 'application_number', {
+        type: Sequelize.STRING(50),
+        allowNull: false,
+        unique: true
+      });
+    }
+
+    // Re-describe to reflect any changes above
+    table = await queryInterface.describeTable('Applications');
+
+    // Add indexes (idempotent)
+    const addIndexSafe = async (table, cols, name) => {
+      try {
+        await queryInterface.addIndex(table, cols, name ? { name } : undefined);
+      } catch (err) {
+        if (!String(err?.message || '').includes('already exists')) throw err;
+      }
+    };
+    await addIndexSafe('Applications', ['status'], 'applications_status');
+    await addIndexSafe('Applications', ['priority'], 'applications_priority');
+    await addIndexSafe('Applications', ['user_id'], 'applications_user_id');
+    await addIndexSafe('Applications', ['incentive_id'], 'applications_incentive_id');
+    if (table.application_number) {
+      await addIndexSafe('Applications', ['application_number'], 'applications_application_number');
+    }
+    await addIndexSafe('Applications', ['submitted_at'], 'applications_submitted_at');
+    await addIndexSafe('Applications', ['created_at'], 'applications_created_at');
   },
 
   async down(queryInterface, Sequelize) {

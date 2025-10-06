@@ -29,12 +29,22 @@ const NewIncentiveApplicationPage: React.FC = () => {
       setLoading(true);
       setError(null);
       const response = await incentivesService.getIncentives({ sector });
-      setIncentives(response.data || []);
+      const list = Array.isArray((response as any)?.data?.incentives)
+        ? (response as any).data.incentives
+        : Array.isArray((response as any)?.data)
+          ? (response as any).data
+          : [];
+      setIncentives(list);
       
       // If no sector-specific incentives found, fetch general incentives as alternatives
       if (!response.data || response.data.length === 0) {
         const alternativeResponse = await incentivesService.getIncentives({ limit: 6 });
-        setAlternativeIncentives(alternativeResponse.data || []);
+        const altList = Array.isArray((alternativeResponse as any)?.data?.incentives)
+          ? (alternativeResponse as any).data.incentives
+          : Array.isArray((alternativeResponse as any)?.data)
+            ? (alternativeResponse as any).data
+            : [];
+        setAlternativeIncentives(altList);
       }
     } catch (err: any) {
       setError(err.message || 'Teşvikler yüklenirken bir hata oluştu.');

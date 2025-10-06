@@ -147,11 +147,13 @@ const AddIncentiveGuide: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await incentiveGuidesService.createIncentiveGuide({
+      // Build payload matching backend expectations; send only valid/filled fields
+      const payload: any = {
         title: formData.title.trim(),
         incentiveId: formData.incentiveId,
         content: formData.content.trim()
-      });
+      };
+      const response = await incentiveGuidesService.createIncentiveGuide(payload);
 
       if (response.success) {
         toast.success('Kılavuz başarıyla oluşturuldu');
@@ -159,9 +161,10 @@ const AddIncentiveGuide: React.FC = () => {
       } else {
         toast.error(response.message || 'Kılavuz oluşturulurken hata oluştu');
       }
-    } catch (error) {
-      console.error('Error creating guide:', error);
-      toast.error('Kılavuz oluşturulurken hata oluştu');
+    } catch (error: any) {
+      console.error('Error creating guide:', error?.response?.data || error);
+      const msg = error?.response?.data?.message || 'Kılavuz oluşturulurken hata oluştu';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

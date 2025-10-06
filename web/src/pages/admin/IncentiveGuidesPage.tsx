@@ -21,7 +21,7 @@ const IncentiveGuidesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'list' | 'published' | 'draft'>('list');
+  const [activeTab, setActiveTab] = useState<'all' | 'published' | 'draft'>('all');
 
   // Load data on component mount
   useEffect(() => {
@@ -32,7 +32,16 @@ const IncentiveGuidesPage: React.FC = () => {
     try {
       setLoading(true);
       const response = await incentiveGuidesService.getIncentiveGuides();
-      setGuides(response.data || []);
+      console.log('[IncentiveGuidesPage] API response', response);
+      const list = Array.isArray((response as any)?.data?.guides)
+        ? (response as any).data.guides
+        : Array.isArray((response as any)?.data?.incentiveGuides)
+          ? (response as any).data.incentiveGuides
+          : Array.isArray((response as any)?.data)
+            ? (response as any).data
+            : [];
+      console.log('[IncentiveGuidesPage] normalized list', list);
+      setGuides(list);
       setError(null);
     } catch (err: any) {
       setError(err.message || 'Kılavuzlar yüklenirken bir hata oluştu.');

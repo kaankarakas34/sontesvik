@@ -1,4 +1,3 @@
-const bcrypt = require('bcryptjs');
 const { User, sequelize } = require('../models');
 
 const basicUsers = [
@@ -20,7 +19,7 @@ const basicUsers = [
     firstName: 'Test',
     lastName: 'Kullanıcı',
     email: 'kullanici@test.com',
-    password: 'user123',
+    password: 'user1234',
     phone: '+90 555 111 11 11',
     role: 'member',
     status: 'active',
@@ -58,8 +57,7 @@ const seedBasicUsers = async () => {
       const [user, created] = await User.findOrCreate({
         where: { email: userData.email },
         defaults: {
-          ...userData,
-          password: await bcrypt.hash(userData.password, 12)
+          ...userData // password will be hashed by User model hooks
         }
       });
       

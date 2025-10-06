@@ -7,12 +7,14 @@ const {
   updateIncentiveGuide,
   publishIncentiveGuide,
   unpublishIncentiveGuide,
-  deleteIncentiveGuide
+  deleteIncentiveGuide,
+  getIncentiveGuideById
 } = require('../controllers/incentiveGuideController');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
 // Public routes (no authentication required)
 router.get('/', getAllIncentiveGuides);
+router.get('/:id', getIncentiveGuideById);
 router.get('/incentive/:incentiveId', getIncentiveGuide);
 
 // Protected routes (authentication required)

@@ -1,11 +1,42 @@
 const { IncentiveGuide, Incentive, User } = require('../models');
 const { Op } = require('sequelize');
+const logger = require('../utils/logger');
+
+// Get incentive guide by guide ID (primary key)
+const getIncentiveGuideById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    logger.info('Fetching incentive guide by id', { id });
+    const guide = await IncentiveGuide.findByPk(id, {
+      include: [
+        {
+          model: Incentive,
+          as: 'incentive',
+          attributes: ['id', 'title', 'description', 'status', 'incentive_type', 'max_amount', 'min_amount']
+        },
+        {
+          model: User,
+          as: 'creator',
+          attributes: ['id', 'firstName', 'lastName', 'email']
+        }
+      ]
+    });
+    if (!guide) {
+      return res.status(404).json({ success: false, message: 'Kılavuz bulunamadı' });
+    }
+    res.json({ success: true, data: guide });
+  } catch (error) {
+    logger.error('Error fetching incentive guide by id', { error: error.message, stack: error.stack });
+    res.status(500).json({ success: false, message: 'Kılavuz getirilirken bir hata oluştu', error: error.message });
+  }
+};
 
 // Get incentive guide by incentive ID
 const getIncentiveGuide = async (req, res) => {
   try {
     const { incentiveId } = req.params;
 
+    logger.info('Fetching incentive guide by incentiveId', { incentiveId });
     const guide = await IncentiveGuide.findOne({
       where: { incentiveId, isActive: true },
       include: [
@@ -29,11 +60,13 @@ const getIncentiveGuide = async (req, res) => {
       });
     }
 
+    logger.info('Fetched incentive guide successfully', { guideId: guide.id });
     res.json({
       success: true,
       data: guide
     });
   } catch (error) {
+    logger.error('Error fetching incentive guide', { error: error.message, stack: error.stack });
     console.error('Error fetching incentive guide:', error);
     res.status(500).json({
       success: false,
@@ -58,6 +91,7 @@ const getAllIncentiveGuides = async (req, res) => {
       ];
     }
 
+    logger.info('Listing incentive guides', { page, limit, offset, search, where: whereClause });
     const { count, rows: guides } = await IncentiveGuide.findAndCountAll({
       where: whereClause,
       include: [
@@ -77,6 +111,7 @@ const getAllIncentiveGuides = async (req, res) => {
       offset: parseInt(offset)
     });
 
+    logger.info('Incentive guides fetched', { count, returned: guides.length });
     res.json({
       success: true,
       data: {
@@ -90,6 +125,7 @@ const getAllIncentiveGuides = async (req, res) => {
       }
     });
   } catch (error) {
+    logger.error('Error fetching incentive guides', { error: error.message, stack: error.stack });
     console.error('Error fetching incentive guides:', error);
     res.status(500).json({
       success: false,
@@ -340,5 +376,6 @@ module.exports = {
   updateIncentiveGuide,
   publishIncentiveGuide,
   unpublishIncentiveGuide,
-  deleteIncentiveGuide
+  deleteIncentiveGuide,
+  getIncentiveGuideById
 };

@@ -14,7 +14,7 @@ module.exports = {
         allowNull: false,
         unique: true,
         references: {
-          model: 'applications',
+          model: 'Applications',
           key: 'id'
         },
         onUpdate: 'CASCADE',
@@ -91,22 +91,18 @@ module.exports = {
       }
     });
 
-    // Indexes
-    await queryInterface.addIndex('ApplicationRooms', ['application_id'], {
-      name: 'application_rooms_application_id_idx'
-    });
-
-    await queryInterface.addIndex('ApplicationRooms', ['status'], {
-      name: 'application_rooms_status_idx'
-    });
-
-    await queryInterface.addIndex('ApplicationRooms', ['priority'], {
-      name: 'application_rooms_priority_idx'
-    });
-
-    await queryInterface.addIndex('ApplicationRooms', ['last_activity_at'], {
-      name: 'application_rooms_last_activity_idx'
-    });
+    // Indexes (idempotent)
+    const addIndexSafe = async (table, cols, name) => {
+      try {
+        await queryInterface.addIndex(table, cols, { name });
+      } catch (err) {
+        if (!String(err?.message || '').includes('already exists')) throw err;
+      }
+    };
+    await addIndexSafe('ApplicationRooms', ['application_id'], 'application_rooms_application_id_idx');
+    await addIndexSafe('ApplicationRooms', ['status'], 'application_rooms_status_idx');
+    await addIndexSafe('ApplicationRooms', ['priority'], 'application_rooms_priority_idx');
+    await addIndexSafe('ApplicationRooms', ['last_activity_at'], 'application_rooms_last_activity_idx');
   },
 
   down: async (queryInterface, Sequelize) => {

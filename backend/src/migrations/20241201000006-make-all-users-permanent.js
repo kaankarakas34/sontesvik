@@ -12,11 +12,11 @@ module.exports = {
       WHERE deleted_at IS NOT NULL
     `);
 
-    // Ensure all users have proper status
+    // Ensure all users are approved (status column does not exist in schema)
     await queryInterface.sequelize.query(`
       UPDATE users 
-      SET status = 'active', is_approved = true
-      WHERE status = 'inactive' OR status = 'suspended'
+      SET is_approved = true
+      WHERE is_approved = false
     `);
 
     // Add a comment to document this change

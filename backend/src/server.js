@@ -160,6 +160,13 @@ const authLimiter = rateLimit({
   }
 });
 
+// Rate limit dev toggle
+const RATE_LIMIT_DISABLED = process.env.RATE_LIMIT_DISABLED === '1' || process.env.NODE_ENV !== 'production';
+const passthrough = (req, res, next) => next();
+const gl = RATE_LIMIT_DISABLED ? passthrough : generalLimiter;
+const apl = RATE_LIMIT_DISABLED ? passthrough : apiLimiter;
+const al = RATE_LIMIT_DISABLED ? passthrough : authLimiter;
+
 // Security middleware
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
@@ -222,24 +229,24 @@ app.use((req, res, next) => {
 app.use(generalLimiter);
 
 // Apply rate limiting to different routes
-app.use('/api/auth', authLimiter, authRoutes);
-app.use('/api/dashboard', generalLimiter, dashboardRoutes);
-app.use('/api/sectors', generalLimiter, sectorRoutes);
-app.use('/api/incentive-types', generalLimiter, incentiveTypeRoutes);
-app.use('/api/document-types', generalLimiter, documentTypeRoutes);
-app.use('/api/incentive-documents', apiLimiter, incentiveDocumentRoutes);
-app.use('/api/notifications', apiLimiter, notificationRoutes);
-app.use('/api/admin', apiLimiter, adminRoutes);
-app.use('/api/applications', apiLimiter, applicationRoutes);
-app.use('/api/application-rooms', apiLimiter, applicationRoomRoutes);
-app.use('/api/incentive-guides', generalLimiter, incentiveGuidesRouter);
-app.use('/api/application-messages', apiLimiter, applicationMessageRoutes);
-app.use('/api/tickets', apiLimiter, ticketRoutes);
-app.use('/api/incentives', apiLimiter, incentiveRoutes);
-app.use('/api/users', generalLimiter, userRoutes);
-app.use('/api/consultants', apiLimiter, consultantRoutes);
-app.use('/api/document-incentive-mappings', apiLimiter, documentIncentiveMappingRoutes);
-app.use('/api/logs', apiLimiter, logRoutes);
+app.use('/api/auth', al, authRoutes);
+app.use('/api/dashboard', gl, dashboardRoutes);
+app.use('/api/sectors', gl, sectorRoutes);
+app.use('/api/incentive-types', gl, incentiveTypeRoutes);
+app.use('/api/document-types', gl, documentTypeRoutes);
+app.use('/api/incentive-documents', apl, incentiveDocumentRoutes);
+app.use('/api/notifications', apl, notificationRoutes);
+app.use('/api/admin', apl, adminRoutes);
+app.use('/api/applications', apl, applicationRoutes);
+app.use('/api/application-rooms', apl, applicationRoomRoutes);
+app.use('/api/incentive-guides', gl, incentiveGuidesRouter);
+app.use('/api/application-messages', apl, applicationMessageRoutes);
+app.use('/api/tickets', apl, ticketRoutes);
+app.use('/api/incentives', apl, incentiveRoutes);
+app.use('/api/users', gl, userRoutes);
+app.use('/api/consultants', apl, consultantRoutes);
+app.use('/api/document-incentive-mappings', apl, documentIncentiveMappingRoutes);
+app.use('/api/logs', apl, logRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

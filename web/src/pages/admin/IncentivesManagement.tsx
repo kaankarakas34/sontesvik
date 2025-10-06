@@ -13,13 +13,13 @@ import {
 } from '@heroicons/react/24/outline';
 import { incentivesService, Incentive } from '../../services/incentivesService';
 import { sectorsService, Sector } from '../../services/sectorsService';
+import { incentiveTypesService, IncentiveType } from '../../services/incentiveTypesService';
 
 interface IncentiveFormData {
   title: string;
   shortDescription: string;
   description: string;
   sectorId: string;
-  incentiveTypes: string[];
   supportAmount: number; // Destek tutarı
   supportCurrency: string; // Para birimi
   hasSupportRate: boolean; // Destek oranı var mı
@@ -28,11 +28,26 @@ interface IncentiveFormData {
   preApprovalDescription: string; // Ön onay açıklaması
   status: 'draft' | 'active' | 'inactive';
   isActive: boolean;
+  // Backend-required fields
+  incentiveTypeId?: string; // DB IncentiveTypes.id
+  provider: string;
+  providerType: 'government' | 'private' | 'ngo' | 'international';
+  // Additional backend fields
+  applicationDeadline?: string; // YYYY-MM-DD
+  minAmount?: number;
+  eligibilityCriteria?: string;
+  requiredDocumentsInput?: string; // comma-separated or JSON
+  applicationUrl?: string;
+  tagsInput?: string; // comma-separated
+  region?: string;
+  country?: string;
+  categoryId?: string; // UUID
 }
 
 const IncentivesManagement: React.FC = () => {
   const [incentives, setIncentives] = useState<Incentive[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
+  const [incentiveTypes, setIncentiveTypes] = useState<IncentiveType[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,7 +63,6 @@ const IncentivesManagement: React.FC = () => {
     shortDescription: '',
     description: '',
     sectorId: '',
-    incentiveTypes: [],
     supportAmount: 0,
     supportCurrency: 'TL',
     hasSupportRate: false,
@@ -57,6 +71,18 @@ const IncentivesManagement: React.FC = () => {
     preApprovalDescription: '',
     status: 'draft',
     isActive: true,
+    incentiveTypeId: undefined,
+    provider: '',
+    providerType: 'government',
+    applicationDeadline: '',
+    minAmount: 0,
+    eligibilityCriteria: '',
+    requiredDocumentsInput: '',
+    applicationUrl: '',
+    tagsInput: '',
+    region: '',
+    country: 'Turkey',
+    categoryId: '',
   });
 
   // Load incentives
@@ -91,17 +117,35 @@ const IncentivesManagement: React.FC = () => {
     }
   };
 
+  // Load incentive types from backend table
+  const loadIncentiveTypes = async () => {
+    try {
+      const types = await incentiveTypesService.getIncentiveTypes();
+      const normalized = Array.isArray(types)
+        ? types
+        : (types && Array.isArray((types as any).incentiveTypes))
+          ? (types as any).incentiveTypes
+          : [];
+      setIncentiveTypes(normalized);
+    } catch (error: any) {
+      // Silent fail with toast to avoid blocking form usage
+      toast.error('Teşvik türleri yüklenemedi');
+    }
+  };
+
   useEffect(() => {
     loadIncentives();
   }, [page, searchTerm, selectedSector, selectedStatus]);
 
   useEffect(() => {
     loadSectors();
+    loadIncentiveTypes();
   }, []);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[IncentivesManagement] handleSubmit triggered', { editing: !!editingIncentive });
     
     if (!formData.title.trim()) {
       toast.error('Teşvik başlığı gereklidir');
@@ -110,11 +154,6 @@ const IncentivesManagement: React.FC = () => {
 
     if (!formData.sectorId) {
       toast.error('Sektör seçimi gereklidir');
-      return;
-    }
-
-    if (formData.incentiveTypes.length === 0) {
-      toast.error('En az bir teşvik türü seçmelisiniz');
       return;
     }
 
@@ -128,14 +167,63 @@ const IncentivesManagement: React.FC = () => {
       return;
     }
 
+    console.log('[IncentivesManagement] validations passed, preparing request');
+
     try {
       setSubmitting(true);
-      
+      // Build requiredDocuments object
+      let requiredDocuments: any = undefined;
+      if (formData.requiredDocumentsInput && formData.requiredDocumentsInput.trim()) {
+        const text = formData.requiredDocumentsInput.trim();
+        try {
+          const parsed = JSON.parse(text);
+          requiredDocuments = parsed;
+        } catch (_) {
+          const docs = text.split(',').map(s => s.trim()).filter(Boolean);
+          requiredDocuments = { docs };
+        }
+      }
+
+      // Build tags array
+      const tags = (formData.tagsInput || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      // Map frontend fields to backend payload
+      const payload = {
+        title: formData.title,
+        description: formData.description || formData.shortDescription || '',
+        incentive_type_id: formData.incentiveTypeId,
+        provider: formData.provider,
+        providerType: formData.providerType,
+        status: formData.status === 'draft' ? 'planned' : formData.status,
+        currency: formData.supportCurrency === 'TL' ? 'TRY' : formData.supportCurrency,
+        maxAmount: formData.supportAmount || undefined,
+        minAmount: formData.minAmount || undefined,
+        applicationDeadline: formData.applicationDeadline || undefined,
+        eligibilityCriteria: formData.eligibilityCriteria || undefined,
+        requiredDocuments,
+        applicationUrl: formData.applicationUrl || undefined,
+        tags: tags.length ? tags : undefined,
+        region: formData.region || undefined,
+        country: formData.country || undefined,
+        category_id: formData.categoryId || undefined,
+        // single sector relationship
+        sector_id: formData.sectorId,
+      } as any;
+
       if (editingIncentive) {
-        await incentivesService.updateIncentive(editingIncentive.id, formData);
+        if (!editingIncentive.id) {
+          console.error('Edit error: editingIncentive has no id', editingIncentive);
+          toast.error('Güncelleme için kayıt kimliği bulunamadı');
+          return;
+        }
+        console.log('Updating incentive', { id: editingIncentive.id, payload });
+        await incentivesService.updateIncentive(editingIncentive.id, payload);
         toast.success('Teşvik başarıyla güncellendi');
       } else {
-        await incentivesService.createIncentive(formData);
+        await incentivesService.createIncentive(payload);
         toast.success('Teşvik başarıyla oluşturuldu');
       }
       
@@ -155,7 +243,6 @@ const IncentivesManagement: React.FC = () => {
       shortDescription: '',
       description: '',
       sectorId: '',
-      incentiveTypes: [],
       supportAmount: 0,
       supportCurrency: 'TL',
       hasSupportRate: false,
@@ -164,6 +251,18 @@ const IncentivesManagement: React.FC = () => {
       preApprovalDescription: '',
       status: 'draft',
       isActive: true,
+      incentiveTypeId: undefined,
+      provider: '',
+      providerType: 'government',
+      applicationDeadline: '',
+      minAmount: 0,
+      eligibilityCriteria: '',
+      requiredDocumentsInput: '',
+      applicationUrl: '',
+      tagsInput: '',
+      region: '',
+      country: 'Turkey',
+      categoryId: '',
     });
     setEditingIncentive(null);
     setShowForm(false);
@@ -176,14 +275,25 @@ const IncentivesManagement: React.FC = () => {
       title: incentive.title || '',
       shortDescription: incentive.shortDescription || '',
       description: incentive.description || '',
-      sectorId: incentive.sectorId || '',
-      incentiveTypes: incentive.incentiveTypes || [],
-      supportAmount: incentive.supportAmount || 0,
-      supportCurrency: incentive.supportCurrency || 'TL',
+      sectorId: incentive.sector_id || incentive.sectorId || (Array.isArray(incentive.Sectors) && incentive.Sectors[0]?.id) || '',
+      supportAmount: incentive.maxAmount || incentive.supportAmount || 0,
+      supportCurrency: (incentive.currency === 'TRY' ? 'TL' : incentive.currency) || 'TL',
       hasSupportRate: incentive.hasSupportRate || false,
       supportRate: incentive.supportRate || 0,
-      status: incentive.status || 'draft',
+      status: (incentive.status === 'planned' ? 'draft' : incentive.status) || 'draft',
       isActive: incentive.isActive ?? true,
+      incentiveTypeId: incentive.incentive_type_id || incentive.incentiveTypeId || undefined,
+      provider: incentive.provider || '',
+      providerType: incentive.providerType || 'government',
+      applicationDeadline: incentive.applicationDeadline ? String(incentive.applicationDeadline).slice(0, 10) : '',
+      minAmount: incentive.minAmount || 0,
+      eligibilityCriteria: incentive.eligibilityCriteria || '',
+      requiredDocumentsInput: incentive.requiredDocuments ? JSON.stringify(incentive.requiredDocuments) : '',
+      applicationUrl: incentive.applicationUrl || '',
+      tagsInput: Array.isArray(incentive.tags) ? incentive.tags.join(', ') : '',
+      region: incentive.region || '',
+      country: incentive.country || 'Turkey',
+      categoryId: incentive.category_id || '',
     });
     setShowForm(true);
   };
@@ -248,13 +358,64 @@ const IncentivesManagement: React.FC = () => {
 
         {/* Add/Edit Form */}
         {showForm && (
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-8 border-l-4 border-red-500">
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-8 border-l-4 border-red-500 relative z-10">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">
               {editingIncentive ? 'Teşvik Düzenle' : 'Yeni Teşvik Ekle'}
             </h2>
             
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Backend Required: Incentive Type (from DB) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Teşvik Türü *
+                  </label>
+                  <select
+                    value={formData.incentiveTypeId || ''}
+                    onChange={(e) => setFormData({ ...formData, incentiveTypeId: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    required
+                  >
+                    <option value="" disabled>Tür seçin</option>
+                    {incentiveTypes.map((type) => (
+                      <option key={type.id} value={type.id}>{type.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Backend Required: Provider */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Sağlayıcı *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.provider}
+                    onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    placeholder="Kurum/kuruluş adı"
+                    required
+                  />
+                </div>
+
+                {/* Backend Required: Provider Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Sağlayıcı Türü *
+                  </label>
+                  <select
+                    value={formData.providerType}
+                    onChange={(e) => setFormData({ ...formData, providerType: e.target.value as any })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    required
+                  >
+                    <option value="government">Kamu</option>
+                    <option value="private">Özel</option>
+                    <option value="ngo">STK</option>
+                    <option value="international">Uluslararası</option>
+                  </select>
+                </div>
+
                 {/* Title */}
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -298,57 +459,27 @@ const IncentivesManagement: React.FC = () => {
                   />
                 </div>
 
-                {/* Sector */}
-                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                     Sektör *
-                   </label>
-                   <select
-                     value={formData.sectorId}
-                     onChange={(e) => setFormData({ ...formData, sectorId: e.target.value })}
-                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                     required
-                   >
-                     <option value="">Sektör seçin</option>
-                     {sectors.map((sector) => (
-                       <option key={sector.id} value={sector.id}>
-                         {sector.name}
-                       </option>
-                     ))}
-                   </select>
-                 </div>
+                {/* Sector (single) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Sektör *
+                  </label>
+                  <select
+                    value={formData.sectorId}
+                    onChange={(e) => setFormData({ ...formData, sectorId: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    required
+                  >
+                    <option value="">Sektör seçin</option>
+                    {sectors.map((sector) => (
+                      <option key={sector.id} value={sector.id}>
+                        {sector.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-                 {/* Incentive Types - Multi Select */}
-                 <div className="md:col-span-2">
-                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                     Teşvik Türleri *
-                   </label>
-                   <div className="space-y-2">
-                     {['teşvik', 'destek', 'hibe'].map((type) => (
-                       <label key={type} className="flex items-center">
-                         <input
-                           type="checkbox"
-                           checked={formData.incentiveTypes.includes(type)}
-                           onChange={(e) => {
-                             if (e.target.checked) {
-                               setFormData({ 
-                                 ...formData, 
-                                 incentiveTypes: [...formData.incentiveTypes, type] 
-                               });
-                             } else {
-                               setFormData({ 
-                                 ...formData, 
-                                 incentiveTypes: formData.incentiveTypes.filter(t => t !== type) 
-                               });
-                             }
-                           }}
-                           className="mr-2 h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-                         />
-                         <span className="text-sm text-gray-700 capitalize">{type}</span>
-                       </label>
-                     ))}
-                   </div>
-                 </div>
+                {/* Incentive Types section removed as requested */}
 
                  {/* Support Amount */}
                  <div>
@@ -480,14 +611,15 @@ const IncentivesManagement: React.FC = () => {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors pointer-events-auto"
                 >
                   İptal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => console.log('[IncentivesManagement] Submit button clicked')}
+                  className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
                 >
                   {submitting ? 'Kaydediliyor...' : (editingIncentive ? 'Güncelle' : 'Kaydet')}
                 </button>

@@ -99,7 +99,12 @@ const EditIncentiveGuide: React.FC = () => {
         // Find the sector for this incentive
         const incentiveResponse = await incentivesService.getIncentives();
         if (incentiveResponse.success) {
-          const incentive = incentiveResponse.data?.find(inc => inc.id === guideData.incentiveId);
+          const list = Array.isArray((incentiveResponse as any)?.data?.incentives)
+            ? (incentiveResponse as any).data.incentives
+            : Array.isArray((incentiveResponse as any)?.data)
+              ? (incentiveResponse as any).data
+              : [];
+          const incentive = list.find((inc: any) => inc.id === guideData.incentiveId);
           const sectorId = incentive?.sectorId || '';
           
           setFormData({
