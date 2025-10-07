@@ -82,11 +82,17 @@ const sendMessage = async (req, res) => {
     const {
       subject,
       message,
-      messageType = 'general',
-      priority = 'medium',
+      messageType: rawMessageType,
+      priority: rawPriority,
       receiverId,
       attachments = []
     } = req.body;
+
+    // Normalize enums against model constraints
+    const allowedTypes = ['question','answer','clarification','document_request','status_update','general'];
+    const allowedPriorities = ['low','medium','high','urgent'];
+    const normalizedType = allowedTypes.includes(rawMessageType) ? rawMessageType : 'general';
+    const normalizedPriority = allowedPriorities.includes(rawPriority) ? rawPriority : 'medium';
 
     // Check if application exists
     const application = await Application.findByPk(applicationId);
@@ -111,12 +117,18 @@ const sendMessage = async (req, res) => {
     let finalReceiverId = receiverId;
     if (!finalReceiverId) {
       if (req.user.role === 'company') {
-        // Company user sending to consultant/admin
-        const consultant = await User.findOne({
-          where: { role: 'consultant' },
-          order: [['createdAt', 'ASC']]
-        });
-        finalReceiverId = consultant ? consultant.id : null;
+        // Company user sending → öncelik atanmış danışman
+        const assignedConsultantId = application.assignedConsultantId;
+        if (assignedConsultantId) {
+          finalReceiverId = assignedConsultantId;
+        } else {
+          // Fallback: herhangi bir aktif danışman
+          const consultant = await User.findOne({
+            where: { role: 'consultant', consultantStatus: 'active', isActive: true, isApproved: true },
+            order: [['createdAt', 'ASC']]
+          });
+          finalReceiverId = consultant ? consultant.id : null;
+        }
       } else {
         // Consultant/admin sending to company
         finalReceiverId = application.userId;
@@ -129,8 +141,8 @@ const sendMessage = async (req, res) => {
       receiverId: finalReceiverId,
       subject,
       message,
-      messageType,
-      priority,
+      messageType: normalizedType,
+      priority: normalizedPriority,
       attachments
     });
 

@@ -261,6 +261,14 @@ module.exports = (sequelize) => {
       }
     ],
     hooks: {
+      // Ensure applicationNumber exists before validation to avoid NOT NULL errors
+      beforeValidate: async (application) => {
+        if (!application.applicationNumber) {
+          const count = await Application.count();
+          const year = new Date().getFullYear();
+          application.applicationNumber = `APP-${year}-${String(count + 1).padStart(6, '0')}`;
+        }
+      },
       beforeCreate: async (application) => {
         if (!application.applicationNumber) {
           // Generate application number

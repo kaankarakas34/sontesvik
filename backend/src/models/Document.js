@@ -199,7 +199,7 @@ module.exports = (sequelize) => {
   }, {
     tableName: 'Documents', // Use correct table name with capital D
     timestamps: true,
-    paranoid: true,
+    paranoid: false,
     indexes: [
       {
         fields: ['file_name']

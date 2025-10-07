@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MagnifyingGlassIcon, FunnelIcon, TagIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import { incentivesService } from '../services/incentivesService';
+import { applicationsService } from '../services/applicationsService';
 
 interface Incentive {
   id: string;
@@ -35,6 +35,18 @@ const BrowseIncentivesPage: React.FC = () => {
   const [selectedSector, setSelectedSector] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Apply modal state
+  const [applyOpen, setApplyOpen] = useState(false);
+  const [applySubmitting, setApplySubmitting] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const [selectedIncentive, setSelectedIncentive] = useState<Incentive | null>(null);
+  const [applyForm, setApplyForm] = useState({
+    projectTitle: '',
+    projectDescription: '',
+    requestedAmount: 0,
+    currency: 'TRY' as 'TRY' | 'USD',
+  });
 
   useEffect(() => {
     fetchIncentives();
@@ -92,6 +104,45 @@ const BrowseIncentivesPage: React.FC = () => {
     return new Date(dateString).toLocaleDateString('tr-TR');
   };
 
+  const openApplyModal = (inc: Incentive) => {
+    setSelectedIncentive(inc);
+    setApplyForm(prev => ({
+      ...prev,
+      projectTitle: inc.title?.slice(0, 80) || '',
+      currency: inc.currency === 'USD' ? 'USD' : 'TRY',
+      requestedAmount: (inc as any)?.minAmount || 0,
+    }));
+    setApplyError(null);
+    setApplyOpen(true);
+  };
+
+  const handleApplyChange = (field: string, value: any) => {
+    setApplyForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const submitApplication = async () => {
+    if (!selectedIncentive) return;
+    try {
+      setApplySubmitting(true);
+      setApplyError(null);
+      const payload = {
+        incentiveId: selectedIncentive.id,
+        projectTitle: applyForm.projectTitle,
+        projectDescription: applyForm.projectDescription,
+        requestedAmount: applyForm.requestedAmount,
+        currency: applyForm.currency,
+      };
+      const result = await applicationsService.createApplication(payload);
+      const applicationId = (result as any)?.data?.id ?? (result as any)?.id;
+      setApplyOpen(false);
+      navigate(`/applications/${applicationId}/room`, { state: { message: 'Başvurunuz oluşturuldu ve danışman atandı.' } });
+    } catch (e: any) {
+      setApplyError(e?.message || 'Başvuru oluşturulamadı');
+    } finally {
+      setApplySubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
@@ -106,7 +157,7 @@ const BrowseIncentivesPage: React.FC = () => {
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <span className="h-5 w-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
                 <input
                   type="text"
                   placeholder="Teşvik ara..."
@@ -128,7 +179,7 @@ const BrowseIncentivesPage: React.FC = () => {
                 Tüm Sektörler
               </button>
               <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2">
-                <FunnelIcon className="h-4 w-4" />
+                <span className="h-4 w-4">⏳</span>
                 Filtrele
               </button>
             </div>
@@ -166,7 +217,7 @@ const BrowseIncentivesPage: React.FC = () => {
                     {/* Sector Badge */}
                     {incentive.sector && (
                       <div className="flex items-center gap-2 mb-3">
-                        <BuildingOfficeIcon className="h-4 w-4 text-gray-500" />
+                        <span className="h-4 w-4 text-gray-500">🏢</span>
                         <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
                           {incentive.sector.name}
                         </span>
@@ -203,7 +254,7 @@ const BrowseIncentivesPage: React.FC = () => {
                       )}
                       {incentive.category && (
                         <div className="flex items-center gap-1 text-sm">
-                          <TagIcon className="h-4 w-4 text-gray-400" />
+                          <span className="h-4 w-4 text-gray-400">🏷️</span>
                           <span className="text-gray-600">{incentive.category.name}</span>
                         </div>
                       )}
@@ -218,7 +269,7 @@ const BrowseIncentivesPage: React.FC = () => {
                         Detayları Görüntüle
                       </button>
                       <button
-                        onClick={() => navigate(`/new-incentive-application?incentive=${incentive.id}`)}
+                        onClick={() => openApplyModal(incentive)}
                         className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm"
                       >
                         Başvur
@@ -279,6 +330,83 @@ const BrowseIncentivesPage: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* Apply Modal */}
+      {applyOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setApplyOpen(false)} />
+          <div className="relative bg-white w-full max-w-lg mx-4 rounded-lg shadow-xl p-6">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Başvuru Oluştur</h3>
+            {selectedIncentive && (
+              <p className="text-sm text-gray-600 mb-4">Teşvik: <span className="font-medium">{selectedIncentive.title}</span></p>
+            )}
+
+            {applyError && (
+              <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3">{applyError}</div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Proje Adı *</label>
+                <input
+                  type="text"
+                  value={applyForm.projectTitle}
+                  onChange={(e) => handleApplyChange('projectTitle', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  placeholder="Proje adı"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Proje Açıklaması *</label>
+                <textarea
+                  rows={4}
+                  value={applyForm.projectDescription}
+                  onChange={(e) => handleApplyChange('projectDescription', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  placeholder="Proje kısa açıklaması"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Talep Edilen Tutar *</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={applyForm.requestedAmount}
+                  onChange={(e) => handleApplyChange('requestedAmount', Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Para Birimi *</label>
+                <select
+                  value={applyForm.currency}
+                  onChange={(e) => handleApplyChange('currency', e.target.value as 'TRY' | 'USD')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                >
+                  <option value="TRY">TRY</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setApplyOpen(false)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                İptal
+              </button>
+              <button
+                onClick={submitApplication}
+                disabled={applySubmitting}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {applySubmitting ? 'Oluşturuluyor...' : 'Başvuruyu Oluştur'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

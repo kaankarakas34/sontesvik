@@ -107,6 +107,76 @@ const getApplications = async (req, res, next) => {
   }
 };
 
+// @desc    Get current user's applications
+// @route   GET /api/applications/my
+// @access  Private
+const getMyApplications = async (req, res, next) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      status,
+      search,
+      dateFrom,
+      dateTo
+    } = req.query;
+
+    const offset = (page - 1) * limit;
+
+    const whereClause = { userId: req.user.id };
+    const includeClause = [
+      {
+        model: Incentive,
+        as: 'incentive',
+        attributes: ['id', 'title', 'description']
+      }
+    ];
+
+    if (status) whereClause.status = status;
+
+    if (dateFrom || dateTo) {
+      whereClause.createdAt = {};
+      if (dateFrom) {
+        whereClause.createdAt[Op.gte] = new Date(dateFrom);
+      }
+      if (dateTo) {
+        const endDate = new Date(dateTo);
+        endDate.setHours(23, 59, 59, 999);
+        whereClause.createdAt[Op.lte] = endDate;
+      }
+    }
+
+    if (search) {
+      includeClause[0].where = {
+        title: { [Op.iLike]: `%${search}%` }
+      };
+      includeClause[0].required = true;
+    }
+
+    const applications = await Application.findAndCountAll({
+      where: whereClause,
+      include: includeClause,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['createdAt', 'DESC']],
+      distinct: true
+    });
+
+    res.json({
+      success: true,
+      data: applications.rows,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(applications.count / limit),
+        totalItems: applications.count,
+        itemsPerPage: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Get application by ID
 // @route   GET /api/applications/:id
 // @access  Private
@@ -124,18 +194,7 @@ const getApplicationById = async (req, res, next) => {
         {
           model: Incentive,
           as: 'incentive',
-          attributes: ['id', 'name', 'nameEn', 'description']
-        },
-        {
-          model: Document,
-          as: 'documents',
-          include: [
-            {
-          model: DocumentType,
-          as: 'type',
-          attributes: ['id', 'name', 'nameEn', 'code']
-        }
-          ]
+          attributes: ['id', 'title', 'description']
         }
       ]
     });
@@ -148,7 +207,11 @@ const getApplicationById = async (req, res, next) => {
     }
 
     // Check if user can access this application
-    if (req.user.role !== 'admin' && application.userId !== req.user.id) {
+    const isAdmin = req.user.role === 'admin';
+    const isOwner = application.userId === req.user.id;
+    const isAssignedConsultant = req.user.role === 'consultant' && application.assignedConsultantId === req.user.id;
+
+    if (!isAdmin && !isOwner && !isAssignedConsultant) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -208,7 +271,7 @@ const createApplication = async (req, res, next) => {
         {
           model: Incentive,
           as: 'incentive',
-          attributes: ['id', 'name', 'nameEn']
+          attributes: ['id', 'title', 'description']
         },
         {
           model: User,
@@ -280,7 +343,7 @@ const updateApplication = async (req, res, next) => {
         {
           model: Incentive,
           as: 'incentive',
-          attributes: ['id', 'name', 'nameEn']
+          attributes: ['id', 'title', 'description']
         }
       ]
     });
@@ -546,6 +609,7 @@ const downloadApplicationDocument = async (req, res, next) => {
 
 module.exports = {
   getApplications,
+  getMyApplications,
   getApplicationById,
   createApplication,
   updateApplication,

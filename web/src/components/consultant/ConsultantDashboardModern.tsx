@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
@@ -41,6 +42,7 @@ import {
 } from 'recharts';
 
 const ConsultantDashboardModern: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useSelector((state: RootState) => state.auth);
   const [dashboardData, setDashboardData] = useState<ConsultantDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -522,6 +524,7 @@ const ConsultantDashboardModern: React.FC = () => {
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
                           className="text-blue-600 hover:text-blue-900 p-1 rounded-full hover:bg-blue-50"
+                          onClick={() => navigate(`/applications/${application.id}`)}
                         >
                           <EyeIcon className="w-4 h-4" />
                         </motion.button>

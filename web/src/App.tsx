@@ -257,7 +257,8 @@ function App() {
           <Route path="applications/new/:incentiveId" element={<NewApplicationPage />} />
           <Route path="/incentive-guide/:id" element={<IncentiveGuidePage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="applications" element={<Applications />} />
+          <Route path="applications" element={<ApplicationsPage />} />
+          <Route path="applications/:id" element={<ApplicationDetailPage />} />
           <Route path="applications/:applicationId/room" element={<ApplicationRoomPage />} />
           <Route path="notifications" element={<NotificationPage />} />
           <Route path="support" element={<Support />} />

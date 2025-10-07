@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const {
   getApplications,
+  getMyApplications,
   getApplicationById,
   createApplication,
   updateApplication,
@@ -83,6 +84,7 @@ router.use(protect);
 
 // Application CRUD routes - with enhanced validation
 router.get('/', validatePagination, getApplications);
+router.get('/my', validatePagination, getMyApplications);
 router.get('/:id', validateId, getApplicationById);
 router.post('/', validateApplication, createApplication);
 router.put('/:id', validateId, validateApplication, updateApplication);

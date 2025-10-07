@@ -22,7 +22,9 @@ interface Incentive {
 interface ApplicationFormData {
   incentiveId: string;
   requestedAmount: number;
+  projectTitle: string;
   projectDescription: string;
+  currency: 'TRY' | 'USD';
   companyInfo: {
     name: string;
     taxNumber: string;
@@ -49,7 +51,9 @@ const NewApplicationPage: React.FC = () => {
   const [formData, setFormData] = useState<ApplicationFormData>({
     incentiveId: incentiveId || '',
     requestedAmount: 0,
+    projectTitle: '',
     projectDescription: '',
+    currency: 'TRY',
     companyInfo: {
       name: '',
       taxNumber: '',
@@ -92,6 +96,10 @@ const NewApplicationPage: React.FC = () => {
       setLoading(true);
       const response = await incentivesService.getIncentiveById(incentiveId!);
       setIncentive(response.data);
+      // Default currency to incentive currency if provided
+      if (response?.data?.currency) {
+        setFormData(prev => ({ ...prev, currency: (response.data.currency === 'USD' ? 'USD' : 'TRY') }));
+      }
     } catch (err: any) {
       setError(err.message || 'Teşvik bilgileri yüklenirken hata oluştu');
     } finally {
@@ -128,18 +136,18 @@ const NewApplicationPage: React.FC = () => {
 
       const applicationData = {
         incentiveId: incentive.id,
-        requestedAmount: formData.requestedAmount,
+        projectTitle: formData.projectTitle,
         projectDescription: formData.projectDescription,
-        companyInfo: formData.companyInfo,
-        contactInfo: formData.contactInfo,
-        status: 'draft'
+        requestedAmount: formData.requestedAmount,
+        currency: formData.currency
       };
 
-      const response = await applicationsService.createApplication(applicationData);
-      
-      // Başarılı oluşturma sonrası yönlendirme
-      navigate(`/applications/${response.data.id}`, {
-        state: { message: 'Başvurunuz başarıyla oluşturuldu!' }
+      const result = await applicationsService.createApplication(applicationData);
+
+      // Başarılı oluşturma sonrası yönlendirme (oda sayfasına)
+      const applicationId = (result as any)?.data?.id ?? (result as any)?.id;
+      navigate(`/applications/${applicationId}/room`, {
+        state: { message: 'Başvurunuz oluşturuldu ve danışman atandı.' }
       });
       
     } catch (err: any) {
@@ -206,6 +214,20 @@ const NewApplicationPage: React.FC = () => {
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Proje Bilgileri</h2>
               
               <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Proje Adı *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.projectTitle}
+                  onChange={(e) => handleInputChange('projectTitle', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  placeholder="Proje adı"
+                />
+              </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Talep Edilen Tutar *
@@ -222,7 +244,7 @@ const NewApplicationPage: React.FC = () => {
                       placeholder="0"
                     />
                     <span className="absolute right-3 top-2 text-gray-500">
-                      {incentive?.currency || 'TRY'}
+                      {formData.currency}
                     </span>
                   </div>
                   {incentive && (
@@ -231,6 +253,21 @@ const NewApplicationPage: React.FC = () => {
                     </p>
                   )}
                 </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Para Birimi *
+                </label>
+                <select
+                  required
+                  value={formData.currency}
+                  onChange={(e) => handleInputChange('currency', e.target.value as 'TRY' | 'USD')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                >
+                  <option value="TRY">TRY</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">

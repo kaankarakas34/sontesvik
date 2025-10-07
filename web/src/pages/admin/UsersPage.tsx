@@ -41,6 +41,7 @@ import {
   CrownOutlined,
 } from '@ant-design/icons';
 import { userService, User, UserStats, Company } from '../../services/userService';
+import { sectorsService, Sector } from '../../services/sectorsService';
 import { useAppSelector } from '../../store/hooks';
 
 const { Option } = Select;
@@ -147,6 +148,7 @@ const UsersPage: React.FC = () => {
   const isAdmin = currentUser?.role === 'admin';
   const [users, setUsers] = useState<User[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [sectors, setSectors] = useState<Sector[]>([]);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [companiesLoading, setCompaniesLoading] = useState(false);
@@ -175,6 +177,17 @@ const UsersPage: React.FC = () => {
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [form] = Form.useForm();
   const [createForm] = Form.useForm();
+  // Fetch sectors for consultant assignment
+  const fetchSectors = async () => {
+    try {
+      const response = await sectorsService.getSectors({ limit: 100, sortBy: 'name', sortOrder: 'ASC', isActive: true });
+      setSectors(response.data?.sectors || []);
+    } catch (error) {
+      console.error('Error fetching sectors:', error);
+      setSectors([]);
+    }
+  };
+
 
   // Fetch users
   const fetchUsers = async () => {
@@ -253,6 +266,7 @@ const UsersPage: React.FC = () => {
     if (isAdmin) {
       fetchUsers();
       fetchStats();
+      fetchSectors();
     }
   }, [isAdmin, pagination.current, pagination.pageSize, searchText, statusFilter, roleFilter]);
 
@@ -294,6 +308,7 @@ const UsersPage: React.FC = () => {
       phone: user.phone,
       role: user.role,
       status: user.status,
+      sectorId: user.sectorId || undefined,
     });
     setEditModalVisible(true);
   };
@@ -1002,6 +1017,7 @@ const UsersPage: React.FC = () => {
                   <Option value="admin">Admin</Option>
                   <Option value="member">Üye</Option>
                   <Option value="company">Şirket</Option>
+                  <Option value="consultant">Danışman</Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -1020,6 +1036,32 @@ const UsersPage: React.FC = () => {
               </Form.Item>
             </Col>
           </Row>
+
+          {/* Consultant sector assignment */}
+          <Form.Item noStyle shouldUpdate={(prev, curr) => prev.role !== curr.role}>
+            {({ getFieldValue }) =>
+              getFieldValue('role') === 'consultant' ? (
+                <Form.Item label="Sektör" name="sectorId" rules={[{ required: false }]}> 
+                  <Select
+                    size="large"
+                    placeholder="Sektör seçin"
+                    loading={false}
+                    allowClear
+                    showSearch
+                    optionFilterProp="children"
+                    filterOption={(input, option) =>
+                      (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
+                    }
+                    style={{ borderRadius: '8px' }}
+                  >
+                    {sectors.map((s) => (
+                      <Option key={s.id} value={s.id}>{s.name}</Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              ) : null
+            }
+          </Form.Item>
           
           <Form.Item style={{ marginTop: '32px', marginBottom: 0 }}>
             <Space style={{ width: '100%', justifyContent: 'flex-end' }}>

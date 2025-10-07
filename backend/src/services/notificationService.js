@@ -14,7 +14,7 @@ class NotificationService {
             as: 'application',
             include: [
               { model: User, as: 'user' },
-              { model: User, as: 'consultant' }
+              { model: User, as: 'assignedConsultant' }
             ]
           }
         ]
@@ -40,8 +40,8 @@ class NotificationService {
       }
 
       // Danışmana bildir (gönderen değilse)
-      if (room.application.consultant && room.application.consultant.id !== senderId) {
-        recipients.push(room.application.consultant);
+      if (room.application.assignedConsultant && room.application.assignedConsultant.id !== senderId) {
+        recipients.push(room.application.assignedConsultant);
       }
 
       // Bildirimleri oluştur
@@ -82,7 +82,7 @@ class NotificationService {
             as: 'application',
             include: [
               { model: User, as: 'user' },
-              { model: User, as: 'consultant' }
+              { model: User, as: 'assignedConsultant' }
             ]
           }
         ]
@@ -108,8 +108,8 @@ class NotificationService {
       }
 
       // Danışmana bildir (yükleyen değilse)
-      if (room.application.consultant && room.application.consultant.id !== uploaderId) {
-        recipients.push(room.application.consultant);
+      if (room.application.assignedConsultant && room.application.assignedConsultant.id !== uploaderId) {
+        recipients.push(room.application.assignedConsultant);
       }
 
       // Bildirimleri oluştur
@@ -152,7 +152,7 @@ class NotificationService {
             as: 'application',
             include: [
               { model: User, as: 'user' },
-              { model: User, as: 'consultant' }
+              { model: User, as: 'assignedConsultant' }
             ]
           }
         ]
@@ -190,8 +190,8 @@ class NotificationService {
       }
 
       // Danışmana bildir (değiştiren değilse)
-      if (room.application.consultant && room.application.consultant.id !== changerId) {
-        recipients.push(room.application.consultant);
+      if (room.application.assignedConsultant && room.application.assignedConsultant.id !== changerId) {
+        recipients.push(room.application.assignedConsultant);
       }
 
       // Bildirimleri oluştur

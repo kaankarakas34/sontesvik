@@ -143,7 +143,7 @@ const updateUser = async (req, res, next) => {
       companyTaxNumber,
       address,
       city,
-      sector
+      sectorId
     } = req.body;
 
     const user = await User.findByPk(id);
@@ -177,7 +177,7 @@ const updateUser = async (req, res, next) => {
       companyTaxNumber: companyTaxNumber || user.companyTaxNumber,
       address: address || user.address,
       city: city || user.city,
-      sector: sector || user.sector
+      sectorId: sectorId !== undefined ? sectorId : user.sectorId
     });
 
     res.json({
@@ -451,7 +451,7 @@ const createUser = async (req, res, next) => {
       companyTaxNumber,
       address,
       city,
-      sector
+      sectorId
     } = req.body;
 
     // Check if user already exists
@@ -476,7 +476,7 @@ const createUser = async (req, res, next) => {
       companyTaxNumber,
       address,
       city,
-      sector,
+      sectorId,
       emailVerified: true, // Admin created users are automatically verified
       createdBy: req.user.id
     });

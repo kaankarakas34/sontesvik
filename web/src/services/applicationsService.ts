@@ -30,6 +30,33 @@ export const applicationsService = {
     }
   },
 
+  // Get current user's applications ("my") with filters and pagination
+  async getMyApplications(params: {
+    filters?: ApplicationFilters
+    page?: number
+    limit?: number
+  }) {
+    try {
+      const queryParams = new URLSearchParams()
+      
+      if (params.page) queryParams.append('page', params.page.toString())
+      if (params.limit) queryParams.append('limit', params.limit.toString())
+      
+      if (params.filters) {
+        Object.entries(params.filters).forEach(([key, value]) => {
+          if (value) queryParams.append(key, value)
+        })
+      }
+      
+      const url = `${API_ENDPOINTS.APPLICATIONS.BASE}/my?${queryParams.toString()}`
+      const response = await apiMethods.get(url)
+      
+      return response.data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  },
+
   // Get application by ID
   async getApplicationById(id: string): Promise<Application> {
     try {

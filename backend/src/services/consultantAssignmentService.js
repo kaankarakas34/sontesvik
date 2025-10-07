@@ -6,12 +6,12 @@ class ConsultantAssignmentService {
    * Otomatik danışman atama algoritması
    * Kullanıcının sektörüne göre en az yük altındaki aktif danışmanı otomatik ata
    */
-  static async autoAssignConsultant(applicationId, userSector) {
+  static async autoAssignConsultant(applicationId, userSectorId) {
     try {
-      console.log(`🔍 Otomatik danışman ataması başlatılıyor - Başvuru: ${applicationId}, Sektör: ${userSector}`);
+      console.log(`🔍 Otomatik danışman ataması başlatılıyor - Başvuru: ${applicationId}, SektörId: ${userSectorId}`);
 
       // Uygun danışmanları bul
-      const availableConsultants = await this.findAvailableConsultants(userSector);
+      const availableConsultants = await this.findAvailableConsultants(userSectorId);
       
       if (availableConsultants.length === 0) {
         console.log('⚠️ Uygun danışman bulunamadı');
@@ -55,14 +55,14 @@ class ConsultantAssignmentService {
   /**
    * Uygun danışmanları bul
    */
-  static async findAvailableConsultants(sector) {
+  static async findAvailableConsultants(sectorId) {
     const consultants = await User.findAll({
       where: {
         role: 'consultant',
         consultantStatus: 'active',
         isApproved: true,
         isActive: true,
-        sector: sector
+        sectorId: sectorId
       },
       include: [
         {
@@ -87,7 +87,7 @@ class ConsultantAssignmentService {
   /**
    * En iyi danışmanı seç (en az yük altında olan)
    */
-  static async selectBestConsultants(consultants) {
+  static async selectBestConsultant(consultants) {
     // Önce aktif başvuru sayısına göre sırala (en az olan önce)
     const consultantsWithLoad = await Promise.all(
       consultants.map(async (consultant) => {
@@ -107,7 +107,7 @@ class ConsultantAssignmentService {
     );
 
     // Yük yüzdesine göre sırala (en düşük önce), sonra puana göre
-    return consultantsWithLoad
+    const ordered = consultantsWithLoad
       .sort((a, b) => {
         if (a.loadPercentage !== b.loadPercentage) {
           return a.loadPercentage - b.loadPercentage;
@@ -115,6 +115,9 @@ class ConsultantAssignmentService {
         return b.consultantRating - a.consultantRating;
       })
       .map(c => consultants.find(con => con.id === c.id));
+
+    // En iyi tek danışmanı döndür
+    return ordered[0];
   }
 
   /**
@@ -210,7 +213,7 @@ class ConsultantAssignmentService {
         assignedBy,
         assignmentType,
         reason,
-        sector: (await Application.findByPk(applicationId)).user.sector,
+        sector: 'by_sector_id',
         previousConsultantId,
         unassignedAt: null,
         unassignedBy: null,

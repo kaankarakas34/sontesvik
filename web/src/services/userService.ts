@@ -6,12 +6,13 @@ export interface User {
   lastName: string;
   email: string;
   phone?: string;
-  role: 'admin' | 'user' | 'company';
+  role: 'admin' | 'member' | 'company' | 'consultant';
   status: 'active' | 'pending' | 'inactive';
   companyName?: string;
   companyTaxNumber?: string;
   address?: string;
   city?: string;
+  sectorId?: string;
   sector?: string;
   createdAt: string;
   updatedAt: string;
@@ -30,7 +31,7 @@ export interface UserFormData {
   companyTaxNumber?: string;
   address?: string;
   city?: string;
-  sector?: string;
+  sectorId?: string;
 }
 
 const getUsers = async (params?: {

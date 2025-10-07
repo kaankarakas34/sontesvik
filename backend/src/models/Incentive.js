@@ -190,6 +190,7 @@ module.exports = (sequelize) => {
       foreignKey: 'incentive_type_id',
       as: 'incentiveTypeModel'
     });
+
   };
 
   return Incentive;

@@ -187,39 +187,10 @@ module.exports = (sequelize) => {
       defaultValue: false,
       field: 'two_factor_enabled'
     },
-    sector: {
-      type: DataTypes.STRING(50),
-      allowNull: false,
-      defaultValue: 'other',
-      validate: {
-        isIn: {
-          args: [[
-            'technology',
-            'manufacturing',
-            'healthcare',
-            'education',
-            'finance',
-            'construction',
-            'agriculture',
-            'tourism',
-            'energy',
-            'transportation',
-            'food',
-            'textile',
-            'automotive',
-            'chemicals',
-            'mining',
-            'telecommunications',
-            'media',
-            'consulting',
-            'real_estate',
-            'logistics',
-            'retail',
-            'other'
-          ]],
-          msg: 'Invalid sector selection'
-        }
-      }
+    sectorId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'sector_id'
     },
     approvedBy: {
       type: DataTypes.UUID,
@@ -345,7 +316,7 @@ module.exports = (sequelize) => {
         fields: ['created_at']
       },
       {
-        fields: ['sector']
+        fields: ['sector_id']
       },
       {
         fields: ['approved_by']
@@ -525,6 +496,9 @@ module.exports = (sequelize) => {
     User.hasMany(models.ConsultantReview, { foreignKey: 'reviewerId', as: 'givenReviews' });
     User.hasMany(models.ConsultantAssignmentLog, { foreignKey: 'consultantId', as: 'assignmentLogs' });
     User.hasMany(models.ConsultantAssignmentLog, { foreignKey: 'assignedBy', as: 'assignedConsultants' });
+    
+    // Sector relation
+    User.belongsTo(models.Sector, { foreignKey: 'sector_id', as: 'sector' });
     
     // Admin approval relationships
     User.belongsTo(models.User, { foreignKey: 'approvedBy', as: 'approvedByUser' });

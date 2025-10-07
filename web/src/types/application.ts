@@ -75,8 +75,10 @@ export interface ApplicationFilters {
 // Create Application Data
 export interface CreateApplicationData {
   incentiveId: string
-  title: string
-  description: string
+  projectTitle: string
+  projectDescription: string
+  requestedAmount: number
+  currency: 'TRY' | 'USD'
   priority?: ApplicationPriority
   metadata?: Record<string, any>
 }

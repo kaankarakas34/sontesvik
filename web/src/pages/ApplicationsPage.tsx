@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlusIcon, FunnelIcon, MagnifyingGlassIcon, EyeIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+// Icons replaced with simple spans to avoid type issues with heroicons
 import { applicationsService } from '../services/applicationsService';
 
 interface Application {
@@ -63,7 +63,8 @@ const ApplicationsPage: React.FC = () => {
         }
       };
 
-      const response = await applicationsService.getApplications(params);
+      const response = await applicationsService.getMyApplications(params);
+      console.log('MY APPLICATIONS response', response);
       
       setApplications(response.data || []);
       setPagination({
@@ -145,7 +146,7 @@ const ApplicationsPage: React.FC = () => {
           onClick={() => navigate('/incentives')}
           className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 font-semibold"
         >
-          <PlusIcon className="h-5 w-5" />
+          <span className="h-5 w-5">＋</span>
           Yeni Başvuru Yap
         </button>
       </div>
@@ -153,7 +154,7 @@ const ApplicationsPage: React.FC = () => {
       {/* Filters */}
       <div className="bg-white shadow-lg rounded-lg p-6 mb-6">
         <div className="flex items-center gap-2 mb-4">
-          <FunnelIcon className="h-5 w-5 text-gray-600" />
+          <span className="h-5 w-5 text-gray-600">⏳</span>
           <h3 className="text-lg font-medium text-gray-900">Filtreler</h3>
         </div>
         
@@ -178,7 +179,7 @@ const ApplicationsPage: React.FC = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Arama</label>
             <div className="relative">
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+              <span className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2">🔍</span>
               <input
                 type="text"
                 value={filters.search}
@@ -247,7 +248,7 @@ const ApplicationsPage: React.FC = () => {
           </div>
         ) : applications.length === 0 ? (
           <div className="p-8 text-center">
-            <DocumentTextIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <span className="h-16 w-16 text-gray-400 mx-auto mb-4 block text-center">📄</span>
             <p className="text-gray-600 mb-4">Henüz başvurunuz bulunmuyor.</p>
             <button
               onClick={() => navigate('/incentives')}
@@ -329,7 +330,7 @@ const ApplicationsPage: React.FC = () => {
                           onClick={() => navigate(`/applications/${application.id}`)}
                           className="text-red-600 hover:text-red-700 flex items-center gap-1"
                         >
-                          <EyeIcon className="h-4 w-4" />
+                          <span className="h-4 w-4">👁️</span>
                           Detay
                         </button>
                       </td>

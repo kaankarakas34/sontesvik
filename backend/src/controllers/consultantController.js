@@ -103,8 +103,15 @@ class ConsultantController {
         });
       }
 
-      // Atanmış başvuruları getir - şimdilik boş array döndür
-      const assignedApplications = [];
+      // Atanmış başvuruları getir
+      const assignedApplications = await Application.findAll({
+        where: { assignedConsultantId: consultantId },
+        order: [['createdAt', 'DESC']],
+        include: [
+          { model: User, as: 'user', attributes: ['id','firstName','lastName','email','companyName'] },
+          { model: require('../models').Incentive, as: 'incentive', attributes: ['id','title','description'] }
+        ]
+      });
 
       // Danışman değerlendirmelerini getir - şimdilik boş array döndür  
       const consultantReviews = [];
@@ -129,8 +136,8 @@ class ConsultantController {
         loadPercentage: (applications.filter(app => ['pending', 'under_review'].includes(app.status)).length / consultant.maxConcurrentApplications) * 100
       };
 
-      // Son 7 gün için başvuru trendi - şimdilik boş array
-      const last7Days = [];
+      // Son 7 gün için başvuru trendi
+      const last7Days = await ConsultantController.getLast7DaysStats(consultantId);
 
       // Aktif başvurular (son 30 gün)
       const activeApplications = applications.filter(app => {
@@ -143,14 +150,11 @@ class ConsultantController {
       res.json({
         success: true,
         data: {
-          consultant: {
-            ...consultant.toJSON(),
-            assignedApplications: applications,
-            consultantReviews: consultantReviews,
-            stats,
-            last7Days,
-            activeApplications
-          }
+          assignedApplications: applications,
+          stats,
+          weeklyStats: last7Days,
+          recentReviews: consultantReviews,
+          consultant: consultant.toJSON(),
         }
       });
 
@@ -240,6 +244,16 @@ class ConsultantController {
         limit: parseInt(limit),
         offset: parseInt(offset)
       });
+
+      // Basic logging for debugging incoming/outgoing data
+      try {
+        console.log('👤 Consultant assigned applications fetched', {
+          consultantId,
+          query: { status, page: Number(page), limit: Number(limit), search: search || null },
+          total: applications.count,
+          applicationIds: applications.rows.map(a => a.id)
+        });
+      } catch (_) { /* no-op */ }
 
       res.json({
         success: true,

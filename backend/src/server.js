@@ -161,7 +161,8 @@ const authLimiter = rateLimit({
 });
 
 // Rate limit dev toggle
-const RATE_LIMIT_DISABLED = process.env.RATE_LIMIT_DISABLED === '1' || process.env.NODE_ENV !== 'production';
+// Completely disable rate limiting for testing
+const RATE_LIMIT_DISABLED = true;
 const passthrough = (req, res, next) => next();
 const gl = RATE_LIMIT_DISABLED ? passthrough : generalLimiter;
 const apl = RATE_LIMIT_DISABLED ? passthrough : apiLimiter;
@@ -226,7 +227,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(generalLimiter);
+app.use(gl);
 
 // Apply rate limiting to different routes
 app.use('/api/auth', al, authRoutes);

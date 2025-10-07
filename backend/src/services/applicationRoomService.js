@@ -18,7 +18,7 @@ class ApplicationRoomService {
           {
             model: User,
             as: 'user',
-            attributes: ['id', 'firstName', 'lastName', 'sector', 'companyName']
+            attributes: ['id', 'firstName', 'lastName', 'sectorId', 'companyName']
           }
         ]
       });
@@ -57,16 +57,16 @@ class ApplicationRoomService {
 
       // Danışman ataması yap
       let assignmentResult = null;
-      if (application.user.sector) {
+      if (application.user.sectorId) {
         assignmentResult = await ConsultantAssignmentService.autoAssignConsultant(
-          applicationId, 
-          application.user.sector
+          applicationId,
+          application.user.sectorId
         );
 
         if (assignmentResult.success) {
-          // Room priority'sini güncelle - yeni atama yapıldığında HOT yap
+          // Room priority'sini güncelle - yeni atama yapıldığında önceliği artır
           await room.update({
-            priority: 'hot',
+            priority: 'urgent',
             consultantNotes: `Danışman otomatik atandı: ${assignmentResult.consultantName}`
           }, { transaction });
 
@@ -159,13 +159,13 @@ class ApplicationRoomService {
 
       if (room) {
         await room.update({
-          priority: 'hot',
+          priority: 'urgent',
           consultantNotes: room.consultantNotes + 
             `\n[${new Date().toLocaleString('tr-TR')}] Danışman atandı: ${consultantName}`,
           lastActivityAt: new Date()
         });
 
-        console.log(`🔥 Room priority HOT yapıldı - Danışman atama nedeniyle: ${consultantName}`);
+        console.log(`🔥 Room priority URGENT yapıldı - Danışman atama nedeniyle: ${consultantName}`);
       }
     } catch (error) {
       console.error('❌ Room güncelleme hatası:', error);
@@ -184,8 +184,8 @@ class ApplicationRoomService {
       if (room) {
         const currentStats = room.stats || {};
         
-        // Kullanıcıdan gelen mesajsa priority'yi hot yap
-        const newPriority = messageType === 'user' ? 'hot' : room.priority;
+        // Kullanıcıdan gelen mesajsa önceliği artır
+        const newPriority = messageType === 'user' ? 'urgent' : room.priority;
         
         await room.update({
           priority: newPriority,
@@ -198,7 +198,7 @@ class ApplicationRoomService {
         });
 
         if (messageType === 'user') {
-          console.log(`🔥 Room priority HOT yapıldı - Yeni kullanıcı mesajı nedeniyle`);
+          console.log(`🔥 Room priority URGENT yapıldı - Yeni kullanıcı mesajı nedeniyle`);
         }
       }
     } catch (error) {
@@ -226,7 +226,7 @@ class ApplicationRoomService {
         }
         
         await room.update({
-          priority: 'hot', // Yeni belge yüklendiğinde hot yap
+          priority: 'urgent', // Yeni belge yüklendiğinde önceliği artır
           stats: {
             ...currentStats,
             totalDocuments: (currentStats.totalDocuments || 0) + 1,
@@ -235,7 +235,7 @@ class ApplicationRoomService {
           lastActivityAt: new Date()
         });
 
-        console.log(`🔥 Room priority HOT yapıldı - Yeni belge yükleme nedeniyle (${user.role})`);
+        console.log(`🔥 Room priority URGENT yapıldı - Yeni belge yükleme nedeniyle (${user.role})`);
         
         // Belge yükleme sonrası room durumunu güncelle
         if (user.role === 'company' && room.status === 'waiting_documents') {
@@ -374,7 +374,7 @@ class ApplicationRoomService {
           }
         ],
         where: {
-          priority: 'hot',
+          priority: 'urgent',
           status: 'active'
         },
         order: [['lastActivityAt', 'DESC']],
