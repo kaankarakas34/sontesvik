@@ -153,26 +153,34 @@ const getIncentives = async (req, res) => {
 
     // Handle sector parameter - map sector enum to sectorId
     if (sector && !sectorId) {
-      // Map user sector enum to sector name
-      const sectorMapping = {
-        'healthcare': 'Sağlık',
-        'technology': 'Teknoloji',
-        'education': 'Eğitim',
-        'finance': 'Finans',
-        'energy': 'Enerji',
-        'manufacturing': 'İmalat',
-        'tourism': 'Turizm',
-        'agriculture': 'Tarım',
-        'construction': 'İnşaat',
-        'other': 'Diğer'
-      };
+      // Eğer sector bir UUID ise (yeni yapı), doğrudan kullan
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      
+      if (uuidRegex.test(sector)) {
+        // Yeni yapı: sector bir UUID
+        where.sectorId = sector;
+      } else {
+        // Eski yapı: sector bir string enum
+        const sectorMapping = {
+          'healthcare': 'Sağlık',
+          'technology': 'Teknoloji',
+          'education': 'Eğitim',
+          'finance': 'Finans',
+          'energy': 'Enerji',
+          'manufacturing': 'İmalat',
+          'tourism': 'Turizm',
+          'agriculture': 'Tarım',
+          'construction': 'İnşaat',
+          'other': 'Diğer'
+        };
 
-      const sectorName = sectorMapping[sector];
-      if (sectorName) {
-        // Find sector by name
-        const sectorRecord = await Sector.findOne({ where: { name: sectorName } });
-        if (sectorRecord) {
-          where.sectorId = sectorRecord.id;
+        const sectorName = sectorMapping[sector];
+        if (sectorName) {
+          // Find sector by name
+          const sectorRecord = await Sector.findOne({ where: { name: sectorName } });
+          if (sectorRecord) {
+            where.sectorId = sectorRecord.id;
+          }
         }
       }
     } else if (sectorId) {

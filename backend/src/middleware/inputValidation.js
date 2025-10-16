@@ -1,4 +1,5 @@
 const { body, param, query, validationResult } = require('express-validator');
+const logger = require('../utils/logger');
 
 // Custom validator for preventing SQL injection patterns
 const preventSqlInjection = (value) => {
@@ -32,6 +33,11 @@ const validate = (req, res, next) => {
       value: error.value,
       location: error.location
     }));
+
+    logger.debug('🔍 Validation Error - Request URL:', req.originalUrl);
+    logger.debug('🔍 Validation Error - Request Method:', req.method);
+    logger.debug('🔍 Validation Error - Request Body:', req.body);
+    logger.debug('🔍 Validation Error - Validation Errors:', errorMessages);
 
     return res.status(400).json({
       success: false,

@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { User } = require('../models');
+const { User, Sector } = require('../models');
 const { Op } = require('sequelize');
 const logger = require('../utils/logger');
 
@@ -18,6 +18,8 @@ const register = async (req, res, next) => {
       phone,
       companyName,
       companyTaxNumber,
+      taxOffice,
+      billingAddress,
       address,
       city,
       sector
@@ -50,6 +52,8 @@ const register = async (req, res, next) => {
       phone,
       companyName,
       companyTaxNumber,
+      taxOffice,
+      billingAddress,
       address,
       city,
       sector,
@@ -87,12 +91,21 @@ const register = async (req, res, next) => {
 // @access  Public
 const login = async (req, res, next) => {
   try {
+    console.log('🔍 Debug - Login request received');
+    console.log('🔍 Debug - Request body:', req.body);
+    console.log('🔍 Debug - Request headers:', req.headers);
+    
     const { email, password } = req.body;
 
-    // Find user by email
+    // Find user by email with sector information
     const user = await User.findOne({ 
       where: { email },
-      attributes: { include: ['password'] }
+      attributes: { include: ['password'] },
+      include: [{
+        model: Sector,
+        as: 'sector',
+        attributes: ['id', 'name', 'code', 'description', 'isActive']
+      }]
     });
 
     if (!user) {
@@ -228,10 +241,10 @@ const logout = async (req, res, next) => {
 const refreshAccessToken = async (req, res, next) => {
   try {
     // Cookie'den veya body'den refresh token al
-    const { refreshToken: token } = req.cookies;
-    const { refreshToken: bodyToken } = req.body;
+    const cookieToken = req.cookies?.refreshToken;
+    const bodyToken = req.body?.refreshToken;
     
-    const refreshToken = token || bodyToken;
+    const refreshToken = cookieToken || bodyToken;
 
     if (!refreshToken) {
       return res.status(401).json({
@@ -241,13 +254,13 @@ const refreshAccessToken = async (req, res, next) => {
     }
 
     // Verify refresh token
-    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
     
     // Find user with this refresh token
     const user = await User.findOne({
       where: {
         id: decoded.id,
-        refreshToken: token,
+        refreshToken: refreshToken,
         status: 'active'
       }
     });
@@ -297,13 +310,35 @@ const refreshAccessToken = async (req, res, next) => {
 // @access  Private
 const getProfile = async (req, res, next) => {
   try {
+    const { User, Sector } = require('../models');
+    
+    // Get user with sector information
+    const user = await User.findByPk(req.user.id, {
+      include: [{
+        model: Sector,
+        as: 'sector',
+        attributes: ['id', 'name', 'code', 'description', 'isActive']
+      }],
+      attributes: {
+        exclude: ['password', 'passwordResetToken', 'passwordResetExpires', 'emailVerificationToken', 'emailVerificationExpires', 'refreshToken']
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
     res.json({
       success: true,
       data: {
-        user: req.user
+        user: user.toJSON()
       }
     });
   } catch (error) {
+    console.error('Error in getProfile:', error);
     next(error);
   }
 };

@@ -16,27 +16,37 @@ const createApiInstance = (store: any): AxiosInstance => { // store parametresi 
   // Request interceptor
   instance.interceptors.request.use(
     (config) => {
-      const state = store.getState();
-      const token = state.auth.token || localStorage.getItem('token');
-
-      console.log('[API Interceptor]', {
-        tokenFromStore: !!state.auth.token,
-        tokenFromLocalStorage: !!localStorage.getItem('token'),
-      });
-
-      if (token) {
-        console.log('[API Interceptor]', 'Token found, setting Authorization header.');
-        config.headers.Authorization = `Bearer ${token}`;
-      } else {
-        console.warn('[API Interceptor]', 'No token found in store or localStorage.');
+      // Public endpoints that don't need Authorization header
+      const publicEndpoints = [
+        API_ENDPOINTS.AUTH.LOGIN,
+        API_ENDPOINTS.AUTH.REGISTER,
+        API_ENDPOINTS.AUTH.REFRESH_TOKEN,
+        API_ENDPOINTS.AUTH.FORGOT_PASSWORD,
+        API_ENDPOINTS.AUTH.RESET_PASSWORD
+      ];
+      
+      // Check if the request URL is a public endpoint
+      const isPublicEndpoint = publicEndpoints.some(endpoint => 
+        config.url?.includes(endpoint)
+      );
+      
+      // Only add Authorization header for non-public endpoints
+      if (!isPublicEndpoint) {
+        // Get token from Redux store first, then localStorage
+        const reduxToken = store.getState()?.auth?.token;
+        const localToken = localStorage.getItem('token');
+        const token = reduxToken || localToken;
+        
+        if (token) {
+          config.headers = config.headers || {};
+          config.headers.Authorization = `Bearer ${token}`;
+        }
       }
-
-      console.log('[API Interceptor]', 'Final headers:', config.headers);
 
       return config;
     },
     (error) => {
-      console.error('[API Interceptor]', 'Request error:', error);
+      console.error('Request Interceptor Error:', error);
       return Promise.reject(error);
     }
   );
@@ -53,27 +63,60 @@ const createApiInstance = (store: any): AxiosInstance => { // store parametresi 
         originalRequest._retry = true;
 
         try {
-          // Try to refresh token
-          const refreshToken = localStorage.getItem('refreshToken');
+          // Get refresh token from Redux store first, then localStorage
+          const currentState = store.getState();
+          const refreshToken = currentState.auth?.refreshToken || localStorage.getItem('refreshToken');
 
           if (refreshToken) {
             const response = await axios.post(
               `${API_CONFIG.BASE_URL}${API_ENDPOINTS.AUTH.REFRESH_TOKEN}`,
-              { refreshToken }
+              { refreshToken },
+              {
+                withCredentials: true, // Cookie desteği için
+                headers: {
+                  'Content-Type': 'application/json'
+                }
+              }
             );
 
-            const { token } = response.data;
-            localStorage.setItem('token', token);
+            const { data } = response.data;
+            if (data && data.accessToken) {
+              localStorage.setItem('token', data.accessToken);
 
-            // Update the authorization header
-            originalRequest.headers.Authorization = `Bearer ${token}`;
+              // Redux store'u da güncelle
+              if (store) {
+                const currentState = store.getState();
+                const currentUser = currentState.auth?.user;
+                const currentRefreshToken = currentState.auth?.refreshToken || localStorage.getItem('refreshToken');
+                
+                store.dispatch({
+                  type: 'auth/setCredentials',
+                  payload: {
+                    user: currentUser,
+                    token: data.accessToken,
+                    refreshToken: currentRefreshToken
+                  }
+                });
+              }
 
-            return instance(originalRequest);
+              // Update the authorization header
+              originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+
+              return instance(originalRequest);
+            }
           }
         } catch (refreshError) {
+          console.error('Token yenileme başarısız:', refreshError);
           // Refresh failed, clear credentials and redirect to login
           localStorage.removeItem('token');
           localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          
+          // Redux store'u da temizle - logout action yerine clearCredentials kullan
+          if (store) {
+            store.dispatch({ type: 'auth/clearCredentials' });
+          }
+          
           window.location.href = '/login';
         }
       }
@@ -86,7 +129,7 @@ const createApiInstance = (store: any): AxiosInstance => { // store parametresi 
 };
 
 // API instance
-let api: AxiosInstance;
+let api: AxiosInstance | undefined;
 let apiMethods: any;
 
 export const injectStore = (_store: any) => {
@@ -114,7 +157,7 @@ export const injectStore = (_store: any) => {
     },
   };
   
-  console.log('[API] Store injected successfully, apiMethods initialized');
+  console.log('API instance initialized successfully');
 };
 
 // Store enjeksiyonu yapılmadan önce geçici bir API objesi sağla
@@ -208,4 +251,4 @@ export const handleApiError = (error: unknown): ApiError => {
   }
 };
 
-export default api;
+export default apiMethods;

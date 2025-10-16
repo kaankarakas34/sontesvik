@@ -121,7 +121,7 @@ const IncentiveGuidePage: React.FC = () => {
   }
 
   const handleStartApplication = () => {
-    navigate(`/applications/new/${id}`);
+    navigate(`/incentive-selection`);
   };
 
   return (

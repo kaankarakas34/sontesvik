@@ -24,7 +24,7 @@ class ApplicationRoomController {
               },
               {
                 model: User,
-                as: 'consultant',
+                as: 'assignedConsultant',
                 attributes: ['id', 'firstName', 'lastName', 'email']
               }
             ]
@@ -41,8 +41,8 @@ class ApplicationRoomController {
 
       // Yetki kontrolü
       const hasAccess = req.user.role === 'admin' ||
-                       (req.user.role === 'consultant' && room.application.assignedConsultantId === req.user.id) ||
-                       (req.user.role === 'company' && room.application.userId === req.user.id);
+                       (req.user.role === 'consultant' && room.application?.assignedConsultantId === req.user.id) ||
+                       (req.user.role === 'company' && room.application?.userId === req.user.id);
 
       if (!hasAccess) {
         return res.status(403).json({

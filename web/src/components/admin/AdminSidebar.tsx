@@ -49,28 +49,9 @@ const AdminSidebar: React.FC = () => {
           </h3>
         </div>
         
-        <NavLink
-          to="/admin/document-incentive-management"
-          className={({ isActive }) =>
-            `group flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 transform hover:scale-[1.02] ${
-              isActive 
-                ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-200 border-l-4 border-red-800' 
-                : 'text-red-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 hover:text-red-800 hover:shadow-md'
-            }`
-          }
-        >
-          <div className="flex items-center">
-            <div className={`p-2 rounded-lg mr-4 transition-all duration-300 ${
-              ({ isActive }: { isActive: boolean }) => isActive 
-                ? 'bg-white/20' 
-                : 'bg-red-100 group-hover:bg-red-200'
-            }`}>
-              <FolderIcon className="h-5 w-5" />
-            </div>
-            <span className="font-medium">Belge Yönetimi</span>
-          </div>
-          <ChevronRightIcon className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        </NavLink>
+
+
+
 
         <NavLink
           to="/admin/dashboard"
@@ -187,28 +168,7 @@ const AdminSidebar: React.FC = () => {
           <ChevronRightIcon className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </NavLink>
 
-        <NavLink
-          to="/admin/tickets"
-          className={({ isActive }) =>
-            `group flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 transform hover:scale-[1.02] ${
-              isActive 
-                ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-200 border-l-4 border-red-800' 
-                : 'text-red-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 hover:text-red-800 hover:shadow-md'
-            }`
-          }
-        >
-          <div className="flex items-center">
-            <div className={`p-2 rounded-lg mr-4 transition-all duration-300 ${
-              ({ isActive }: { isActive: boolean }) => isActive 
-                ? 'bg-white/20' 
-                : 'bg-red-100 group-hover:bg-red-200'
-            }`}>
-              <ChatBubbleLeftRightIcon className="h-5 w-5" />
-            </div>
-            <span className="font-medium">Ticket Yönetimi</span>
-          </div>
-          <ChevronRightIcon className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        </NavLink>
+        
 
         <NavLink
           to="/admin/applications"

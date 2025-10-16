@@ -295,7 +295,7 @@ const getMemberDashboardStats = async (req, res) => {
     const recentApplications = await Application.findAll({
       where: { userId: userId },
       limit: 5,
-      order: [['created_at', 'DESC']],
+      order: [['createdAt', 'DESC']],
       include: [
         {
           model: Incentive,
@@ -398,7 +398,7 @@ const getRecentActivities = async (req, res) => {
     const activities = await Application.findAll({
       where: whereCondition,
       limit,
-      order: [['updatedAt', 'DESC']],
+      order: [['updated_at', 'DESC']],
       include: [
         {
           model: User,

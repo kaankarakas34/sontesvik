@@ -41,6 +41,7 @@ const ConsultantAssignmentLog = require('./ConsultantAssignmentLog')(sequelize);
 const ConsultantReview = require('./ConsultantReview')(sequelize);
 const ApplicationRoom = require('./ApplicationRoom')(sequelize);
 const ApplicationMessage = require('./ApplicationMessage')(sequelize);
+const ApplicationIncentive = require('./ApplicationIncentive')(sequelize);
 
 // Call associate methods if they exist
 Object.keys(sequelize.models).forEach(modelName => {
@@ -70,5 +71,6 @@ module.exports = {
   ConsultantAssignmentLog,
   ConsultantReview,
   ApplicationRoom,
-  ApplicationMessage
+  ApplicationMessage,
+  ApplicationIncentive
 };

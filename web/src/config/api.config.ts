@@ -51,7 +51,7 @@ export const API_ENDPOINTS = {
     LOGIN: '/auth/login',
     REGISTER: '/auth/register',
     LOGOUT: '/auth/logout',
-    REFRESH_TOKEN: '/auth/refresh',
+    REFRESH_TOKEN: '/auth/refresh-token',
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
     VERIFY_EMAIL: '/auth/verify-email',
@@ -76,6 +76,7 @@ export const API_ENDPOINTS = {
     SEARCH: '/incentives/search',
     CATEGORIES: '/incentives/categories',
     BY_CATEGORY: (categoryId: string) => `/incentives/category/${categoryId}`,
+    GUIDES: '/incentive-guides',
   },
   
   // Applications
@@ -89,6 +90,12 @@ export const API_ENDPOINTS = {
     STATS: '/applications/stats',
     DOCUMENTS: (id: string) => `/applications/${id}/documents`,
     UPLOAD_DOCUMENT: (id: string) => `/applications/${id}/documents/upload`,
+  },
+
+  // Multi-Incentive Applications
+  MULTI_INCENTIVE_APPLICATIONS: {
+    BASE: '/multi-incentive-applications',
+    CREATE: '/multi-incentive-applications',
   },
   
   // Documents
@@ -106,6 +113,15 @@ export const API_ENDPOINTS = {
     MARK_READ: (id: string) => `/notifications/${id}/read`,
     MARK_ALL_READ: '/notifications/mark-all-read',
     UNREAD_COUNT: '/notifications/unread-count',
+  },
+
+  // Messages
+  MESSAGES: {
+    BASE: '/application-messages',
+    BY_ID: (id: string) => `/application-messages/${id}`,
+    APPLICATION: (applicationId: string) => `/application-messages/application/${applicationId}`,
+    READ: (id: string) => `/application-messages/${id}/read`,
+    UNREAD_COUNT: (applicationId: string) => `/application-messages/application/${applicationId}/unread-count`,
   },
   
   // Admin

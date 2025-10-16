@@ -162,7 +162,7 @@ module.exports = (sequelize) => {
     },
     incentiveId: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true, // Multi-incentive uygulamaları için opsiyonel
       field: 'incentive_id',
       references: {
         model: 'incentives',
@@ -354,6 +354,14 @@ module.exports = (sequelize) => {
     Application.belongsTo(models.Incentive, {
       foreignKey: 'incentiveId',
       as: 'incentive'
+    });
+
+    // Application has many Incentives through ApplicationIncentive
+    Application.belongsToMany(models.Incentive, {
+      through: models.ApplicationIncentive,
+      foreignKey: 'applicationId',
+      otherKey: 'incentiveId',
+      as: 'incentives'
     });
 
     // Application belongs to User (reviewer)

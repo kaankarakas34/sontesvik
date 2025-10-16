@@ -9,9 +9,12 @@ const getApplicationMessages = async (req, res) => {
     const { page = 1, limit = 20 } = req.query;
     const offset = (page - 1) * limit;
 
+    console.log('getApplicationMessages called:', { applicationId, userId: req.user.id, userRole: req.user.role });
+
     // Check if user has access to this application
     const application = await Application.findByPk(applicationId);
     if (!application) {
+      console.log('Application not found:', applicationId);
       return res.status(404).json({
         success: false,
         message: 'Başvuru bulunamadı'
@@ -22,16 +25,23 @@ const getApplicationMessages = async (req, res) => {
     if (req.user.role !== 'admin' && 
         req.user.role !== 'consultant' && 
         application.userId !== req.user.id) {
+      console.log('Authorization failed:', { userId: req.user.id, applicationUserId: application.userId, userRole: req.user.role });
       return res.status(403).json({
         success: false,
         message: 'Bu başvurunun mesajlarını görme yetkiniz yok'
       });
     }
 
+    console.log('Fetching messages for application:', applicationId);
+    console.log('Using findByApplicationId with params:', { applicationId, limit: parseInt(limit), offset: parseInt(offset) });
+    
     const messages = await ApplicationMessage.findByApplicationId(applicationId, {
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
+    console.log('Messages fetched:', messages.length);
+    console.log('First message structure:', messages.length > 0 ? JSON.stringify(messages[0], null, 2) : 'No messages');
+    console.log('Messages data sample:', messages.slice(0, 2));
 
     // Mark messages as read for the current user
     await ApplicationMessage.update(
@@ -44,6 +54,15 @@ const getApplicationMessages = async (req, res) => {
         }
       }
     );
+
+    console.log('Sending response with messages:', messages.length);
+    console.log('First message in response:', messages.length > 0 ? {
+      id: messages[0].id,
+      message: messages[0].message,
+      sender: messages[0].sender,
+      receiver: messages[0].receiver,
+      createdAt: messages[0].createdAt
+    } : 'No messages');
 
     res.json({
       success: true,
@@ -87,6 +106,9 @@ const sendMessage = async (req, res) => {
       receiverId,
       attachments = []
     } = req.body;
+
+    console.log('sendMessage called:', { applicationId, userId: req.user.id, userRole: req.user.role });
+    console.log('Request body:', req.body);
 
     // Normalize enums against model constraints
     const allowedTypes = ['question','answer','clarification','document_request','status_update','general'];
@@ -177,6 +199,16 @@ const sendMessage = async (req, res) => {
         message
       );
     }
+
+    console.log('Message created successfully:', {
+      messageId: createdMessage.id,
+      applicationId: createdMessage.applicationId,
+      senderId: createdMessage.senderId,
+      receiverId: createdMessage.receiverId,
+      message: createdMessage.message,
+      sender: createdMessage.sender,
+      receiver: createdMessage.receiver
+    });
 
     res.status(201).json({
       success: true,

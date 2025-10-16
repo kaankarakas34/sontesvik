@@ -31,6 +31,16 @@ export interface User {
   createdAt: string
   updatedAt: string
   
+  // Company information
+  companyName?: string
+  companyTaxNumber?: string
+  taxOffice?: string
+  sector?: {
+    id: string
+    name: string
+    code?: string
+  }
+  
   // Profile completion
   profileCompletion: number
   
@@ -70,6 +80,12 @@ export interface RegisterData {
   firstName: string
   lastName: string
   phone?: string
+  companyName?: string
+  companyTaxNumber?: string
+  taxOffice?: string
+  billingAddress?: string
+  role: 'member' | 'consultant'
+  sector: string
   acceptTerms: boolean
   acceptPrivacy: boolean
 }

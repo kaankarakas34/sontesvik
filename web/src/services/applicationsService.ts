@@ -67,6 +67,11 @@ export const applicationsService = {
     }
   },
 
+  // Alias for getApplicationById for backward compatibility
+  async getById(id: string): Promise<Application> {
+    return this.getApplicationById(id)
+  },
+
   // Create new application
   async createApplication(data: CreateApplicationData): Promise<Application> {
     try {
@@ -178,6 +183,31 @@ export const applicationsService = {
   async rejectApplication(id: string, reason: string): Promise<Application> {
     try {
       const response = await apiMethods.post(API_ENDPOINTS.APPLICATIONS.REJECT(id), { reason })
+      return response.data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  },
+
+  // Create multi-incentive application
+  async createMultiIncentiveApplication(data: {
+    incentiveIds: string[]
+    projectTitle?: string
+    projectDescription?: string
+    requestedAmount?: number
+    currency?: string
+    priority?: string
+  }): Promise<{
+    success: boolean
+    data: {
+      application: Application
+      room: any
+      incentives: any[]
+      assignment: any
+    }
+  }> {
+    try {
+      const response = await apiMethods.post(API_ENDPOINTS.MULTI_INCENTIVE_APPLICATIONS.CREATE, data)
       return response.data
     } catch (error) {
       throw handleApiError(error)

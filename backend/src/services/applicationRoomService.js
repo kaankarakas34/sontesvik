@@ -384,7 +384,7 @@ class ApplicationRoomService {
       return rooms;
 
     } catch (error) {
-      console.error('❌ HOT priority roomları getirme hatası:', error);
+      console.error('HOT priority roomlar getirilirken hata:', error);
       return [];
     }
   }

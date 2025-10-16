@@ -137,11 +137,17 @@ module.exports = (sequelize) => {
       allowNull: false,
       defaultValue: 'Turkey'
     },
-    // Single-sector relation via FK
+    // Single sector relation via FK
     sectorId: {
       type: DataTypes.UUID,
       allowNull: true,
       field: 'sector_id'
+    },
+    // IncentiveType relation via FK
+    incentiveTypeId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'incentive_type_id'
     }
   }, {
     timestamps: true,
@@ -170,7 +176,7 @@ module.exports = (sequelize) => {
   Incentive.associate = function(models) {
     // Single sector relation
     Incentive.belongsTo(models.Sector, {
-      foreignKey: 'sector_id',
+      foreignKey: 'sectorId',
       as: 'sector'
     });
     
@@ -179,15 +185,17 @@ module.exports = (sequelize) => {
       as: 'guide'
     });
 
-    // Incentive has many Applications
-    Incentive.hasMany(models.Application, {
+    // Incentive has many Applications through ApplicationIncentive
+    Incentive.belongsToMany(models.Application, {
+      through: models.ApplicationIncentive,
       foreignKey: 'incentiveId',
+      otherKey: 'applicationId',
       as: 'applications'
     });
 
     // Relation: IncentiveType
     Incentive.belongsTo(models.IncentiveType, {
-      foreignKey: 'incentive_type_id',
+      foreignKey: 'incentiveTypeId',
       as: 'incentiveTypeModel'
     });
 

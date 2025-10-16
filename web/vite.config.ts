@@ -21,9 +21,17 @@ export default defineConfig({
   },
   server: {
     port: 3001,
-    host: true,
-    open: true,
-    strictPort: true, // Port değiştirilmesin
+    host: 'localhost',
+    open: false,
+    strictPort: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5002',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, '/api')
+      }
+    }
   },
   build: {
     outDir: 'dist',

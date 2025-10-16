@@ -66,7 +66,7 @@ const IncentivesPage: React.FC = () => {
             <p className="text-gray-600">Başvurularınızı görüntüleyin ve yönetin.</p>
           </div>
           <button
-            onClick={() => navigate('/new-incentive-application')}
+            onClick={() => window.location.href = 'http://localhost:3001/incentive-selection'}
             className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
           >
             Yeni Başvuru

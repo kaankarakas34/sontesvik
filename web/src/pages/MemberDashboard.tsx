@@ -14,7 +14,8 @@ import {
   XCircleIcon,
   ExclamationTriangleIcon,
   PlusIcon,
-  ArrowRightIcon
+  ArrowRightIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 import { RootState } from '../store/store';
 import dashboardService from '../services/dashboardService';
@@ -308,9 +309,15 @@ const MemberDashboard: React.FC = () => {
   // Header buttons data
   const headerButtons = [
     {
+      title: 'Teşvik Seç & Başvuru Yap',
+      icon: <SparklesIcon className="h-6 w-6" />,
+      onClick: () => navigate('/incentive-selection'),
+      color: 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800'
+    },
+    {
       title: 'Başvuru Yap',
       icon: <DocumentTextIcon className="h-6 w-6" />,
-      onClick: () => navigate('/applications/new'),
+      onClick: () => navigate('/incentive-selection'),
       color: 'bg-red-600 hover:bg-red-700'
     },
     {
@@ -322,7 +329,7 @@ const MemberDashboard: React.FC = () => {
     {
       title: 'Profil Ayarları',
       icon: <CogIcon className="h-6 w-6" />,
-      onClick: () => navigate('/profile/settings'),
+      onClick: () => navigate('/profile?tab=settings'),
       color: 'bg-red-700 hover:bg-red-800'
     }
   ];
@@ -360,7 +367,7 @@ const MemberDashboard: React.FC = () => {
             </div>
 
             {/* Header Buttons */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {headerButtons.map((button, index) => (
                 <motion.button
                   key={index}
@@ -511,7 +518,7 @@ const MemberDashboard: React.FC = () => {
                       }
                     </p>
                     <button
-                      onClick={() => navigate('/applications/new')}
+                      onClick={() => navigate('/incentive-selection')}
                       className="mt-4 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
                     >
                       İlk Başvuruyu Yap

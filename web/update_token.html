@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Token Güncelle</title>
+</head>
+<body>
+    <h1>Token Güncelleniyor...</h1>
+    <script>
+        localStorage.setItem('token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Ijc2ZmEwNWQ4LThhZDQtNDU1Yi1hZTRlLTM3MjgzMmQ4YmUwYyIsImVtYWlsIjoibWVtYmVyQGV4YW1wbGUuY29tIiwicm9sZSI6Im1lbWJlciIsImlhdCI6MTc2MDYwOTA3MywiZXhwIjoxNzYwNjk1NDczfQ.FWiqLRkWDhtg62uKTVxk2pr6IMgwEfkcmjX8twE8AWc');
+        localStorage.setItem('user', JSON.stringify({id:'76fa05d8-8ad4-455b-ae4e-372832d8be0c',email:'member@example.com',role:'member'}));
+        console.log('Token ve user güncellendi');
+        alert('Token güncellendi! Şimdi test sayfasına yönlendiriliyorsunuz.');
+        window.location.href = 'http://localhost:3001/multi-incentive-application/e3394ce1-d5e1-4ea9-aa80-e60860d615fe';
+    </script>
+</body>
+</html>

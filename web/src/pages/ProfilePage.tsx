@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
 import { RootState } from '../store';
 import { 
   BuildingOfficeIcon, 
@@ -31,9 +32,22 @@ interface Document {
 
 const ProfilePage: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.auth);
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'profile' | 'documents' | 'settings'>('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+
+  // URL parametresine göre tab ayarlama
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'settings') {
+      setActiveTab('settings');
+    } else if (tab === 'documents') {
+      setActiveTab('documents');
+    } else if (tab === 'profile') {
+      setActiveTab('profile');
+    }
+  }, [searchParams]);
 
   // Mock company data
   const companyData = {
@@ -274,6 +288,14 @@ const ProfilePage: React.FC = () => {
                       />
                     ) : (
                       <p className="text-gray-900 font-medium">{companyData.website}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Sektör</label>
+                    {user?.sector ? (
+                      <p className="text-gray-900 font-medium">{user.sector.name}</p>
+                    ) : (
+                      <p className="text-gray-500 text-sm">Sektör bilgisi tanımlı değil</p>
                     )}
                   </div>
                   <div className="md:col-span-2">

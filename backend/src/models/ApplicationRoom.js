@@ -242,16 +242,18 @@ module.exports = (sequelize) => {
   };
 
   ApplicationRoom.findByApplicationId = function(applicationId) {
+    const { Application, User, Incentive } = require('./index');
+    
     return this.findOne({
       where: { applicationId },
       include: [
         {
-          model: this.sequelize.models.Application,
+          model: Application,
           as: 'application',
           include: [
-            { model: this.sequelize.models.User, as: 'user' },
-            { model: this.sequelize.models.User, as: 'assignedConsultant' },
-            { model: this.sequelize.models.Incentive, as: 'incentive' }
+            { model: User, as: 'user' },
+            { model: User, as: 'assignedConsultant' },
+            { model: Incentive, as: 'incentive' }
           ]
         }
       ]

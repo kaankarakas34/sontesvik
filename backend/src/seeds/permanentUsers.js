@@ -15,7 +15,6 @@ const permanentUsers = [
     emailVerified: true,
     companyName: 'Tesvik 360',
     companyTaxNumber: '1234567890',
-    sector: 'technology',
   },
   {
     id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
@@ -29,7 +28,6 @@ const permanentUsers = [
     emailVerified: true,
     companyName: 'Member Company',
     companyTaxNumber: '0987654321',
-    sector: 'manufacturing',
   },
   {
     id: 'b2c3d4e5-f6a7-8901-2345-67890abcdef1',
@@ -43,7 +41,6 @@ const permanentUsers = [
     emailVerified: true,
     companyName: 'Consultant Company',
     companyTaxNumber: '1122334455',
-    sector: 'other',
   },
 ];
 
@@ -52,13 +49,9 @@ const seedPermanentUsers = async () => {
     console.log('🌱 Kalıcı kullanıcılar için veritabanı hazırlanıyor...');
 
     for (const userData of permanentUsers) {
-      // sectorId olmadan kullanıcıyı oluştur (sadece sector enum kullan)
-      const userDataWithoutSectorId = { ...userData };
-      delete userDataWithoutSectorId.sectorId;
-
       // Kullanıcıyı oluştur (şifre User modelindeki beforeCreate hook'u tarafından hash'lenecek)
       await User.create({
-        ...userDataWithoutSectorId,
+        ...userData,
         password: userData.password, // Ham şifre, model tarafından hash'lenecek
       });
 
@@ -80,10 +73,7 @@ module.exports = { seedPermanentUsers, permanentUsers };
 
 // Eğer bu dosya doğrudan çalıştırılırsa seed'i çalıştır
 if (require.main === module) {
-  const { sequelize } = require('../models');
-  
-  sequelize.sync({ force: true })
-    .then(() => seedPermanentUsers())
+  seedPermanentUsers()
     .then(() => {
       console.log('🎉 Kalıcı kullanıcı seed işlemi tamamlandı!');
       process.exit(0);

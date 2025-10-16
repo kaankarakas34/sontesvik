@@ -6,18 +6,13 @@ const protect = async (req, res, next) => {
   try {
     let token;
 
-    console.log('Auth middleware called - Headers:', req.headers.authorization);
-
-    // Check for token in headers
+    // 1. Authorization header'dan token'ı al
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     }
 
-    console.log('Extracted token:', token);
-
-    // Make sure token exists
+    // 2. Token yoksa hata döndür
     if (!token) {
-      console.log('No token provided');
       return res.status(401).json({
         success: false,
         error: { message: 'Not authorized to access this route' }
@@ -25,42 +20,65 @@ const protect = async (req, res, next) => {
     }
 
     try {
-      // Verify token
+      // 3. Token'ı doğrula
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      console.log('Token decoded:', decoded);
-      
-      // Get user from token
+
+      // 4. Kullanıcıyı veritabanından bul (sektör bilgisiyle birlikte)
       const user = await User.findByPk(decoded.id, {
-        attributes: { exclude: ['password'] }
+        attributes: { exclude: ['password'] },
+        include: [
+          {
+            model: require('../models').Sector,
+            as: 'sector',
+            attributes: ['id', 'name', 'code', 'description']
+          }
+        ]
       });
 
-      console.log('User found:', user ? `${user.id} - ${user.role}` : 'null');
-
       if (!user) {
-        console.log('User not found in database');
         return res.status(401).json({
           success: false,
           error: { message: 'User not found' }
         });
       }
 
-      // Check if user is active
+      // 5. Kullanıcının aktif olup olmadığını kontrol et
       if (user.status !== 'active') {
-        console.log('User status is not active:', user.status);
         return res.status(401).json({
           success: false,
           error: { message: 'User account is not active' }
         });
       }
 
+      // 6. Kullanıcıyı request nesnesine ekle
       req.user = user;
-      console.log('Authentication successful for user:', user.id);
       next();
     } catch (error) {
-      console.log('Token verification error:', error.message);
+      // Handle specific JWT errors
+      if (error.name === 'TokenExpiredError') {
+        return res.status(401).json({
+          success: false,
+          error: {
+            message: 'Token has expired',
+            code: 'TOKEN_EXPIRED',
+            needsRefresh: true
+          }
+        });
+      }
+
+      if (error.name === 'JsonWebTokenError') {
+        return res.status(401).json({
+          success: false,
+          error: {
+            message: 'Invalid token',
+            code: 'INVALID_TOKEN'
+          }
+        });
+      }
+
       return res.status(401).json({
         success: false,
-        error: { message: 'Not authorized to access this route' }
+        error: { message: 'Not authorized to access this route (token failed)', details: error.message }
       });
     }
   } catch (error) {
@@ -108,7 +126,14 @@ const optionalAuth = async (req, res, next) => {
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findByPk(decoded.id, {
-          attributes: { exclude: ['password'] }
+          attributes: { exclude: ['password'] },
+          include: [
+            {
+              model: require('../models').Sector,
+              as: 'sector',
+              attributes: ['id', 'name', 'code', 'description']
+            }
+          ]
         });
         
         if (user && user.status === 'active') {

@@ -10,16 +10,8 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 console.log('📝 Setting up logger...');
-// Simple console logger for now
-const logger = {
-  info: console.log,
-  error: console.error,
-  warn: console.warn,
-  debug: console.log,
-  stream: {
-    write: (message) => console.log(message.trim())
-  }
-};
+// Load the real logger
+const logger = require('./utils/logger');
 
 console.log('🗄️ Loading models...');
 const { sequelize } = require('./models');
@@ -69,6 +61,10 @@ console.log('Loading document incentive mapping routes...');
 const documentIncentiveMappingRoutes = require('./routes/documentIncentiveMappingRoutes');
 console.log('Loading log routes...');
 const logRoutes = require('./routes/logs');
+console.log('Loading multi-incentive application routes...');
+const multiIncentiveApplicationRoutes = require('./routes/multiIncentiveApplications');
+console.log('Loading incentive selection routes...');
+const incentiveSelectionRoutes = require('./routes/incentiveSelectionRoutes');
 
 console.log('🔧 Loading middleware...');
 const errorHandler = require('./middleware/errorHandler');
@@ -174,20 +170,33 @@ app.use(helmet({
 }));
 
 // CORS configuration
-app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:3002',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001',
-    'http://127.0.0.1:3002',
-    process.env.MOBILE_URL || 'http://localhost:19006'
-  ],
+const corsOptions = {
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      process.env.FRONTEND_URL || 'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:3002',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
+      'http://127.0.0.1:3002',
+      process.env.MOBILE_URL || 'http://localhost:19006'
+    ];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200 // For pre-flight requests
+};
+
+app.use(cors(corsOptions));
+
+// Explicitly handle pre-flight requests
+app.options('*', cors(corsOptions));
 
 // Middleware
 app.use(compression());
@@ -248,6 +257,8 @@ app.use('/api/users', gl, userRoutes);
 app.use('/api/consultants', apl, consultantRoutes);
 app.use('/api/document-incentive-mappings', apl, documentIncentiveMappingRoutes);
 app.use('/api/logs', apl, logRoutes);
+app.use('/api/multi-incentive-applications', apl, multiIncentiveApplicationRoutes);
+app.use('/api/incentive-selection', apl, incentiveSelectionRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

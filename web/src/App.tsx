@@ -3,9 +3,9 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import { setCredentials, logout } from './store/slices/authSlice'
+import { authService } from './services/authService'
 import { startAutoTokenRefresh, startTokenExpiryChecker } from './utils/tokenUtils'
-import NewIncentiveApplicationPage from './pages/NewIncentiveApplicationPage';
-import NewApplicationPage from './pages/NewApplicationPage';
+import MultiIncentiveApplicationPage from './pages/MultiIncentiveApplicationPage';
 import IncentiveGuidePage from './pages/IncentiveGuidePage';
 import BrowseIncentivesPage from './pages/BrowseIncentivesPage';
 import TicketListPage from './pages/admin/TicketListPage';
@@ -72,8 +72,10 @@ import NotificationPage from './pages/NotificationPage';
 import SectorSettings from './pages/admin/SectorSettings';
 import IncentiveSettings from './pages/admin/IncentiveSettings';
 import DocumentManagement from './pages/admin/DocumentManagement';
-import DocumentIncentiveManagement from './pages/admin/DocumentIncentiveManagement';
+
 import NotificationCenter from './pages/admin/NotificationCenter';
+import IncentiveSelectionPage from './pages/IncentiveSelectionPage';
+import TestIncentiveSelection from './pages/TestIncentiveSelection';
 
 // Types
 import type { RootState } from './store'
@@ -120,6 +122,33 @@ function App() {
   const { isAuthenticated, user, token } = useSelector((state: RootState) => state.auth)
 
   useEffect(() => {
+    // Kullanıcı authenticated ise ve sector bilgisi yoksa, güncel kullanıcı bilgilerini al
+    const fetchCurrentUser = async () => {
+      if (isAuthenticated && token && !user?.sector) {
+        try {
+          const response = await authService.getCurrentUser();
+          if (response.data?.user) {
+            dispatch(setCredentials({
+              user: response.data.user,
+              token: token,
+              refreshToken: localStorage.getItem('refreshToken')
+            }));
+          }
+        } catch (error) {
+          console.error('Kullanıcı bilgileri alınamadı:', error);
+        }
+      }
+    };
+
+    fetchCurrentUser();
+  }, [dispatch, isAuthenticated, token, user?.sector]);
+
+  useEffect(() => {
+    // Sadece authenticated kullanıcılar için token kontrolü yap
+    if (!isAuthenticated || !token) {
+      return;
+    }
+
     // Token süresi kontrolünü başlat
     const stopTokenChecker = startTokenExpiryChecker(
       () => {
@@ -144,8 +173,8 @@ function App() {
         }));
       },
       () => {
-        // Token yenileme başarısız
-        dispatch(logout());
+        // Token yenileme başarısız - clearCredentials kullan
+        dispatch({ type: 'auth/clearCredentials' });
       }
     );
 
@@ -153,7 +182,7 @@ function App() {
       stopTokenChecker();
       stopAutoRefresh();
     };
-  }, [dispatch]); // user dependency'sini kaldırdım
+  }, [dispatch, isAuthenticated, token]); // user dependency'sini kaldırdım, isAuthenticated ve token ekledim
 
   return (
     <>
@@ -230,7 +259,7 @@ function App() {
           <Route path="sector-settings" element={<SectorSettings />} />
           <Route path="incentive-settings" element={<IncentiveSettings />} />
           <Route path="document-management" element={<DocumentManagement />} />
-          <Route path="document-incentive-management" element={<DocumentIncentiveManagement />} />
+          
           <Route path="notification-center" element={<NotificationCenter />} />
           <Route path="logs" element={<LogsPage />} />
         </Route>
@@ -253,11 +282,14 @@ function App() {
           <Route path="user-dashboard" element={<MemberDashboard />} />
           <Route path="incentives" element={<IncentivesPage />} />
           <Route path="browse-incentives" element={<BrowseIncentivesPage />} />
-          <Route path="new-incentive-application" element={<NewIncentiveApplicationPage />} />
-          <Route path="applications/new/:incentiveId" element={<NewApplicationPage />} />
+          <Route path="incentive-selection" element={<IncentiveSelectionPage />} />
+          <Route path="test-incentive-selection" element={<TestIncentiveSelection />} />
+          <Route path="multi-incentive-application/:id" element={<MultiIncentiveApplicationPage />} />
+          <Route path="multi-incentive-application" element={<MultiIncentiveApplicationPage />} />
           <Route path="/incentive-guide/:id" element={<IncentiveGuidePage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="applications" element={<ApplicationsPage />} />
+          <Route path="applications/new-with-incentives" element={<Navigate to="/incentive-selection" replace />} />
           <Route path="applications/:id" element={<ApplicationDetailPage />} />
           <Route path="applications/:applicationId/room" element={<ApplicationRoomPage />} />
           <Route path="notifications" element={<NotificationPage />} />

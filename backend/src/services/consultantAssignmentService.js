@@ -85,7 +85,7 @@ class ConsultantAssignmentService {
   }
 
   /**
-   * En iyi danışmanı seç (en az yük altında olan)
+   * En iyi danışmanı seç (eğer birden fazla uygun danışman varsa random seç)
    */
   static async selectBestConsultant(consultants) {
     // Önce aktif başvuru sayısına göre sırala (en az olan önce)
@@ -116,7 +116,15 @@ class ConsultantAssignmentService {
       })
       .map(c => consultants.find(con => con.id === c.id));
 
-    // En iyi tek danışmanı döndür
+    // Eğer birden fazla danışman varsa, en iyi 3 arasından random seç
+    if (ordered.length > 1) {
+      const topConsultants = ordered.slice(0, Math.min(3, ordered.length));
+      const randomIndex = Math.floor(Math.random() * topConsultants.length);
+      console.log(`🎲 Birden fazla uygun danışman bulundu, random seçim yapılıyor. Toplam: ${ordered.length}, Seçilen: ${randomIndex + 1}. sıradaki danışman`);
+      return topConsultants[randomIndex];
+    }
+
+    // Tek danışman varsa onu döndür
     return ordered[0];
   }
 

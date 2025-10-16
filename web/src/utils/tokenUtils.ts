@@ -17,24 +17,38 @@ interface JWTPayload {
 export const checkTokenExpiry = (token: string, bufferMinutes: number = 5) => {
   try {
     const decoded = jwtDecode<JWTPayload>(token);
-    const currentTime = Date.now() / 1000; // Saniye cinsinden
-    const expiryTime = decoded.exp;
-    const timeUntilExpiry = expiryTime - currentTime;
-    const bufferSeconds = bufferMinutes * 60;
+    const currentTime = Math.floor(Date.now() / 1000);
+    const expirationTime = decoded.exp;
+    const bufferTime = bufferMinutes * 60;
+
+    const isExpired = currentTime >= expirationTime;
+    const willExpireSoon = currentTime >= (expirationTime - bufferTime);
+    const expiresIn = Math.floor((expirationTime - currentTime) / 60); // dakika cinsinden
+
+    console.log('Token expiry check:', {
+      currentTime: new Date(currentTime * 1000).toISOString(),
+      expirationTime: new Date(expirationTime * 1000).toISOString(),
+      isExpired,
+      willExpireSoon,
+      expiresIn: `${expiresIn} dakika`,
+      bufferMinutes
+    });
 
     return {
-      isExpired: timeUntilExpiry <= 0,
-      willExpireSoon: timeUntilExpiry <= bufferSeconds && timeUntilExpiry > 0,
-      expiresIn: Math.max(0, Math.floor(timeUntilExpiry / 60)), // Dakika cinsinden
-      payload: decoded
+      isExpired,
+      willExpireSoon,
+      expiresIn,
+      expirationTime,
+      currentTime
     };
   } catch (error) {
-    console.error('Token decode error:', error);
+    console.error('Token decode hatası:', error);
     return {
       isExpired: true,
-      willExpireSoon: false,
+      willExpireSoon: true,
       expiresIn: 0,
-      payload: null
+      expirationTime: 0,
+      currentTime: Math.floor(Date.now() / 1000)
     };
   }
 };
@@ -45,23 +59,29 @@ export const checkTokenExpiry = (token: string, bufferMinutes: number = 5) => {
  * @returns Yeni access token veya null
  */
 export const refreshAccessToken = async (refreshToken: string): Promise<string | null> => {
+  console.log('Attempting to refresh access token...');
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/refresh-token`, {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5002/api'}/auth/refresh-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ refreshToken }),
+      credentials: 'include', // Cookie'lerin gönderilmesi için kritik
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      return data.data?.accessToken || null;
+    const result = await response.json();
+
+    if (response.ok && result.data?.accessToken) {
+      console.log('Access token refreshed successfully.');
+      // Yeni refresh token localStorage'da güncellenmez çünkü backend cookie olarak yönetiyor
+      return result.data.accessToken;
     }
 
+    console.error('Token refresh failed:', { status: response.status, message: result.message || 'No error message' });
     return null;
   } catch (error) {
-    console.error('Token refresh error:', error);
+    console.error('An unexpected error occurred during token refresh:', error);
     return null;
   }
 };
@@ -126,13 +146,16 @@ export const startAutoTokenRefresh = (
     const refreshToken = localStorage.getItem('refreshToken');
 
     if (!token || !refreshToken) {
+      console.log('Token veya refresh token bulunamadı');
       return;
     }
 
-    const { willExpireSoon, isExpired } = checkTokenExpiry(token, 10); // 10 dakika kala yenile
+    const { willExpireSoon, isExpired, expiresIn } = checkTokenExpiry(token, 30); // 30 dakika kala yenile
+
+    console.log('Token durumu:', { willExpireSoon, isExpired, expiresIn });
 
     if (willExpireSoon || isExpired) {
-      console.log('Token yenileniyor...');
+      console.log('Token yenileniyor... Kalan süre:', expiresIn, 'dakika');
       const newToken = await refreshAccessToken(refreshToken);
 
       if (newToken) {
@@ -140,7 +163,7 @@ export const startAutoTokenRefresh = (
         onRefreshSuccess(newToken);
         console.log('Token başarıyla yenilendi');
       } else {
-        console.log('Token yenileme başarısız');
+        console.log('Token yenileme başarısız, kullanıcı çıkış yapılıyor');
         onRefreshFailed();
       }
     }
@@ -149,8 +172,8 @@ export const startAutoTokenRefresh = (
   // İlk kontrolü hemen yap
   checkAndRefresh();
 
-  // Her 5 dakikada bir kontrol et
-  const intervalId = setInterval(checkAndRefresh, 5 * 60 * 1000);
+  // Her 2 dakikada bir kontrol et (daha sık)
+  const intervalId = setInterval(checkAndRefresh, 2 * 60 * 1000);
 
   return () => {
     clearInterval(intervalId);

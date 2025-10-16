@@ -1,4 +1,4 @@
-const { Application, Document, User, Incentive, DocumentType, ApplicationRoom } = require('../models');
+const { Application, Document, User, Incentive, DocumentType } = require('../models');
 const ApplicationRoomService = require('../services/applicationRoomService');
 const { Op } = require('sequelize');
 const path = require('path');
@@ -183,6 +183,13 @@ const getMyApplications = async (req, res, next) => {
 const getApplicationById = async (req, res, next) => {
   try {
     const { id } = req.params;
+    console.log('=== GET APPLICATION BY ID DEBUG ===');
+    console.log('Application ID:', id);
+    console.log('Request User:', {
+      id: req.user.id,
+      role: req.user.role,
+      email: req.user.email
+    });
 
     const application = await Application.findByPk(id, {
       include: [
@@ -200,29 +207,49 @@ const getApplicationById = async (req, res, next) => {
     });
 
     if (!application) {
+      console.log('Application not found');
       return res.status(404).json({
         success: false,
         message: 'Application not found'
       });
     }
 
+    console.log('Application found:', {
+      id: application.id,
+      userId: application.userId,
+      assignedConsultantId: application.assignedConsultantId
+    });
+
     // Check if user can access this application
     const isAdmin = req.user.role === 'admin';
     const isOwner = application.userId === req.user.id;
     const isAssignedConsultant = req.user.role === 'consultant' && application.assignedConsultantId === req.user.id;
 
+    console.log('Authorization check:', {
+      isAdmin,
+      isOwner,
+      isAssignedConsultant,
+      applicationUserId: application.userId,
+      requestUserId: req.user.id,
+      userRole: req.user.role,
+      assignedConsultantId: application.assignedConsultantId
+    });
+
     if (!isAdmin && !isOwner && !isAssignedConsultant) {
+      console.log('ACCESS DENIED - No authorization');
       return res.status(403).json({
         success: false,
         message: 'Access denied'
       });
     }
 
+    console.log('ACCESS GRANTED');
     res.json({
       success: true,
       data: application
     });
   } catch (error) {
+    console.log('ERROR in getApplicationById:', error);
     next(error);
   }
 };
@@ -238,28 +265,6 @@ const createApplication = async (req, res, next) => {
     };
 
     const application = await Application.create(applicationData);
-
-    // ApplicationRoom oluştur ve otomatik danışman ataması yap
-    try {
-      const ApplicationRoomService = require('../services/applicationRoomService');
-      const roomResult = await ApplicationRoomService.createRoomForApplication(
-        application.id, 
-        req.user.id
-      );
-      
-      logger.info('Application room oluşturuldu', {
-        applicationId: application.id,
-        roomId: roomResult.room?.id,
-        consultantAssigned: roomResult.assignment?.success,
-        consultantName: roomResult.assignment?.consultantName
-      });
-    } catch (roomError) {
-      logger.warn('Application room oluşturma başarısız oldu', {
-        applicationId: application.id,
-        error: roomError.message
-      });
-      // Room oluşturulamadı ama başvuru oluşturuldu, bu kritik değil
-    }
 
     const applicationWithDetails = await Application.findByPk(application.id, {
       include: [
@@ -277,11 +282,6 @@ const createApplication = async (req, res, next) => {
           model: User,
           as: 'assignedConsultant',
           attributes: ['id', 'firstName', 'lastName', 'email', 'sector']
-        },
-        {
-          model: ApplicationRoom,
-          as: 'room',
-          attributes: ['id', 'roomName', 'status', 'priority']
         }
       ]
     });
@@ -289,9 +289,7 @@ const createApplication = async (req, res, next) => {
     res.status(201).json({
       success: true,
       data: applicationWithDetails,
-      message: applicationWithDetails.assignedConsultant ? 
-        'Başvurunuz oluşturuldu ve danışmanınız atandı' : 
-        'Başvurunuz oluşturuldu, danışman ataması yapılacaktır'
+      message: 'Başvurunuz oluşturuldu'
     });
   } catch (error) {
     next(error);
@@ -323,15 +321,6 @@ const updateApplication = async (req, res, next) => {
     }
 
     await application.update(req.body);
-
-    // Eğer status değişmişse room durumunu da güncelle
-    if (req.body.status && req.body.status !== application.status) {
-      await ApplicationRoomService.updateRoomOnApplicationStatusChange(
-        id, 
-        req.body.status, 
-        req.user.id
-      );
-    }
 
     const updatedApplication = await Application.findByPk(id, {
       include: [
@@ -458,44 +447,79 @@ const uploadApplicationDocument = async (req, res, next) => {
 // @route   GET /api/applications/:id/documents
 // @access  Private
 const getApplicationDocuments = async (req, res, next) => {
+  console.log('=== BACKEND: getApplicationDocuments BAŞLADI ===');
+  console.log('Request params:', req.params);
+  const { id } = req.params;
+
+  if (!id) {
+    console.log('Application ID is missing');
+    return res.status(400).json({ success: false, message: 'Application ID is required' });
+  }
+
   try {
-    const { id } = req.params;
-
     const application = await Application.findByPk(id);
-
     if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: 'Application not found'
-      });
+      console.log('Application not found with ID:', id);
+      return res.status(404).json({ success: false, message: 'Application not found' });
     }
 
-    // Check if user can access this application's documents
-    if (req.user.role !== 'admin' && application.userId !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
+    // Check if user can access this application (same logic as getApplicationById)
+    const isAdmin = req.user.role === 'admin';
+    const isOwner = application.userId === req.user.id;
+    const isAssignedConsultant = req.user.role === 'consultant' && application.assignedConsultantId === req.user.id;
+
+    console.log('Authorization check:', {
+      isAdmin,
+      isOwner,
+      isAssignedConsultant,
+      applicationUserId: application.userId,
+      requestUserId: req.user.id,
+      userRole: req.user.role,
+      assignedConsultantId: application.assignedConsultantId
+    });
+
+    if (!isAdmin && !isOwner && !isAssignedConsultant) {
+      console.log('ACCESS DENIED - No authorization');
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
+
+    console.log('Yetkilendirme başarılı, belgeler getiriliyor...');
+    console.log('Fetching documents for application:', id);
 
     const documents = await Document.findAll({
       where: { applicationId: id },
       include: [
         {
           model: DocumentType,
-          as: 'type',
+          as: 'documentTypeInfo',
           attributes: ['id', 'name', 'nameEn', 'code']
         }
       ],
       order: [['createdAt', 'DESC']]
     });
 
-    res.json({
+    console.log('Documents fetched:', documents.length);
+    console.log('Document detayları:', documents.map(doc => ({
+      id: doc.id,
+      originalName: doc.originalName,
+      fileSize: doc.fileSize,
+      mimeType: doc.mimeType,
+      createdAt: doc.createdAt
+    })));
+
+    const response = {
       success: true,
       data: documents
-    });
+    };
+
+    console.log('Gönderilen yanıt:', JSON.stringify(response, null, 2));
+    console.log('=== BACKEND: getApplicationDocuments BAŞARIYLA BİTTİ ===');
+
+    res.status(200).json(response);
   } catch (error) {
-    next(error);
+    console.error('=== BACKEND: getApplicationDocuments HATASI ===');
+    console.error('Error fetching documents for application:', { applicationId: id, errorMessage: error.message, errorStack: error.stack });
+    res.status(500).json({ success: false, message: 'Failed to fetch documents' });
   }
 };
 

@@ -104,6 +104,16 @@ module.exports = (sequelize) => {
       allowNull: true,
       field: 'company_tax_number'
     },
+    taxOffice: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      field: 'tax_office'
+    },
+    billingAddress: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: 'billing_address'
+    },
     address: {
       type: DataTypes.TEXT,
       allowNull: true

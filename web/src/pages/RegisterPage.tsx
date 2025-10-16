@@ -13,6 +13,9 @@ const RegisterPage: React.FC = () => {
     role: 'member' as 'member' | 'consultant',
     sector: '',
     companyName: '',
+    companyTaxNumber: '',
+    taxOffice: '',
+    billingAddress: '',
     phone: '',
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -222,6 +225,51 @@ const RegisterPage: React.FC = () => {
             onChange={handleChange}
             className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500"
             placeholder="Şirket adınızı girin (opsiyonel)"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="companyTaxNumber" className="block text-sm font-medium text-gray-700">
+            Vergi Numarası
+          </label>
+          <input
+            id="companyTaxNumber"
+            name="companyTaxNumber"
+            type="text"
+            value={formData.companyTaxNumber}
+            onChange={handleChange}
+            className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500"
+            placeholder="Vergi numaranızı girin (opsiyonel)"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="taxOffice" className="block text-sm font-medium text-gray-700">
+            Vergi Dairesi
+          </label>
+          <input
+            id="taxOffice"
+            name="taxOffice"
+            type="text"
+            value={formData.taxOffice}
+            onChange={handleChange}
+            className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500"
+            placeholder="Vergi dairenizi girin (opsiyonel)"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="billingAddress" className="block text-sm font-medium text-gray-700">
+            Fatura Adresi
+          </label>
+          <textarea
+            id="billingAddress"
+            name="billingAddress"
+            rows={3}
+            value={formData.billingAddress}
+            onChange={handleChange}
+            className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500"
+            placeholder="Fatura adresinizi girin (opsiyonel)"
           />
         </div>
 
