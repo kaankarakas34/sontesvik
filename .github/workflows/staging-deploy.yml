@@ -1,0 +1,118 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy'
+        required: true
+        default: 'develop'
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_BACKEND: ${{ github.repository }}/backend
+  IMAGE_NAME_FRONTEND: ${{ github.repository }}/frontend
+
+jobs:
+  # Build and test
+  build-and-test:
+    uses: ./.github/workflows/ci-cd.yml
+    secrets: inherit
+
+  # Deploy to staging
+  deploy-staging:
+    runs-on: ubuntu-latest
+    name: Deploy to Staging
+    needs: [build-and-test]
+    environment: 
+      name: staging
+      url: ${{ secrets.STAGING_URL }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch || 'develop' }}
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.STAGING_SSH_KEY }}
+
+    - name: Deploy to staging server
+      run: |
+        ssh ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} << 'EOF'
+          cd ${{ secrets.STAGING_PATH }}
+          
+          echo "🚀 Deploying to staging environment..."
+          
+          # Pull latest code
+          git fetch --all
+          git checkout ${{ inputs.branch || 'develop' }}
+          git pull origin ${{ inputs.branch || 'develop' }}
+          
+          # Login to GitHub Container Registry
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          
+          # Use staging-specific docker-compose
+          if [ ! -f "docker-compose.staging.yml" ]; then
+            cp docker-compose.yml docker-compose.staging.yml
+            # Update for staging environment
+            sed -i 's/production/staging/g' docker-compose.staging.yml
+          fi
+          
+          # Pull and deploy
+          docker-compose -f docker-compose.staging.yml pull
+          docker-compose -f docker-compose.staging.yml up -d
+          
+          # Wait for services
+          sleep 30
+          
+          echo "✅ Staging deployment completed"
+        EOF
+
+    - name: Health check staging
+      run: |
+        echo "🏥 Checking staging health..."
+        sleep 30
+        
+        if curl -f -s ${{ secrets.STAGING_URL }}/api/health; then
+          echo "✅ Staging health check passed"
+        else
+          echo "❌ Staging health check failed"
+          exit 1
+        fi
+
+    - name: Run integration tests on staging
+      run: |
+        echo "🧪 Running integration tests on staging..."
+        # Add your integration test commands here
+        # For example:
+        # npm run test:integration -- --baseUrl=${{ secrets.STAGING_URL }}
+
+  # Notify team
+  notify-staging:
+    runs-on: ubuntu-latest
+    name: Notify Staging Deployment
+    needs: [deploy-staging]
+    if: always()
+    
+    steps:
+    - name: Create staging summary
+      run: |
+        echo "## 🎭 Staging Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Status:** ${{ needs.deploy-staging.result == 'success' && '✅ Success' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Branch:** ${{ inputs.branch || 'develop' }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Deployed by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Staging URL:** ${{ secrets.STAGING_URL }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🧪 Test the deployment" >> $GITHUB_STEP_SUMMARY
+        echo "- Frontend: ${{ secrets.STAGING_URL }}" >> $GITHUB_STEP_SUMMARY
+        echo "- API Health: ${{ secrets.STAGING_URL }}/api/health" >> $GITHUB_STEP_SUMMARY
+        echo "- API Docs: ${{ secrets.STAGING_URL }}/api/docs" >> $GITHUB_STEP_SUMMARY

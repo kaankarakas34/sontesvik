@@ -1,0 +1,224 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_BACKEND: ${{ github.repository }}/backend
+  IMAGE_NAME_FRONTEND: ${{ github.repository }}/frontend
+
+jobs:
+  # Create Release
+  create-release:
+    runs-on: ubuntu-latest
+    name: Create Release
+    
+    outputs:
+      release-id: ${{ steps.create-release.outputs.id }}
+      upload-url: ${{ steps.create-release.outputs.upload_url }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Get the previous tag
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        
+        if [ -z "$PREVIOUS_TAG" ]; then
+          CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges)
+        else
+          CHANGELOG=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+        fi
+        
+        echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+        echo "$CHANGELOG" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      id: create-release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: Release ${{ github.ref_name }}
+        body: |
+          ## 🚀 What's New in ${{ github.ref_name }}
+          
+          ### Changes
+          ${{ steps.changelog.outputs.CHANGELOG }}
+          
+          ### 📦 Docker Images
+          - Backend: `ghcr.io/${{ github.repository }}/backend:${{ github.ref_name }}`
+          - Frontend: `ghcr.io/${{ github.repository }}/frontend:${{ github.ref_name }}`
+          
+          ### 🔧 Deployment
+          ```bash
+          # Pull the latest images
+          docker pull ghcr.io/${{ github.repository }}/backend:${{ github.ref_name }}
+          docker pull ghcr.io/${{ github.repository }}/frontend:${{ github.ref_name }}
+          
+          # Update your docker-compose.prod.yml to use these tags
+          # Then deploy
+          ./scripts/deploy.sh deploy
+          ```
+          
+          ### 📋 Migration Notes
+          - Check DEPLOYMENT.md for any required database migrations
+          - Review environment variable changes in .env.production
+          - Backup your data before upgrading
+        draft: false
+        prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'rc') }}
+
+  # Build and Push Release Images
+  build-release-images:
+    runs-on: ubuntu-latest
+    name: Build Release Images
+    needs: [create-release]
+    
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Extract version from tag
+      id: version
+      run: |
+        VERSION=${GITHUB_REF_NAME#v}
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "MAJOR_VERSION=$(echo $VERSION | cut -d. -f1)" >> $GITHUB_OUTPUT
+        echo "MINOR_VERSION=$(echo $VERSION | cut -d. -f1-2)" >> $GITHUB_OUTPUT
+
+    - name: Build and push backend release image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend
+        file: ./backend/Dockerfile
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.ref_name }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.version.outputs.VERSION }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.version.outputs.MAJOR_VERSION }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.version.outputs.MINOR_VERSION }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build and push frontend release image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./web
+        file: ./web/Dockerfile
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.ref_name }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ steps.version.outputs.VERSION }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ steps.version.outputs.MAJOR_VERSION }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ steps.version.outputs.MINOR_VERSION }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # Generate Release Assets
+  generate-assets:
+    runs-on: ubuntu-latest
+    name: Generate Release Assets
+    needs: [create-release]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create deployment package
+      run: |
+        mkdir -p release-assets
+        
+        # Create deployment package
+        tar -czf release-assets/tesvik360-deployment-${{ github.ref_name }}.tar.gz \
+          docker-compose.prod.yml \
+          nginx/ \
+          scripts/ \
+          .env.production \
+          backend/init.sql \
+          DEPLOYMENT.md \
+          README-PRODUCTION.md
+
+    - name: Upload deployment package
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload-url }}
+        asset_path: ./release-assets/tesvik360-deployment-${{ github.ref_name }}.tar.gz
+        asset_name: tesvik360-deployment-${{ github.ref_name }}.tar.gz
+        asset_content_type: application/gzip
+
+  # Deploy to Production (if enabled)
+  deploy-release:
+    runs-on: ubuntu-latest
+    name: Deploy Release to Production
+    needs: [build-release-images]
+    if: ${{ !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'rc') }}
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+    - name: Deploy release to production
+      run: |
+        ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << EOF
+          cd ${{ secrets.DEPLOY_PATH }}
+          
+          # Pull latest code
+          git fetch --tags
+          git checkout ${{ github.ref_name }}
+          
+          # Update docker-compose to use release tags
+          sed -i 's|ghcr.io/${{ github.repository }}/backend:latest|ghcr.io/${{ github.repository }}/backend:${{ github.ref_name }}|g' docker-compose.prod.yml
+          sed -i 's|ghcr.io/${{ github.repository }}/frontend:latest|ghcr.io/${{ github.repository }}/frontend:${{ github.ref_name }}|g' docker-compose.prod.yml
+          
+          # Login to registry
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          
+          # Create backup
+          ./scripts/backup.sh
+          
+          # Deploy release
+          ./scripts/deploy.sh deploy
+          
+          # Tag the deployment
+          echo "Deployed version ${{ github.ref_name }} at $(date)" >> deployment.log
+        EOF
+
+    - name: Verify deployment
+      run: |
+        sleep 60
+        curl -f ${{ secrets.DEPLOY_URL }}/api/health
+        echo "✅ Release ${{ github.ref_name }} deployed successfully!"

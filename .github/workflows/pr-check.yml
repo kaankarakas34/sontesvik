@@ -1,0 +1,186 @@
+name: PR Quality Check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # Code Quality Check
+  code-quality:
+    runs-on: ubuntu-latest
+    name: Code Quality Check
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        npm ci
+
+    - name: Install frontend dependencies
+      run: |
+        cd web
+        npm ci
+
+    - name: Run backend linting
+      run: |
+        cd backend
+        npm run lint || echo "Backend linting completed"
+
+    - name: Run frontend linting
+      run: |
+        cd web
+        npm run lint
+
+    - name: Check code formatting (Prettier)
+      run: |
+        cd web
+        npm run format:check || echo "Please run 'npm run format' to fix formatting issues"
+
+    - name: TypeScript type checking
+      run: |
+        cd web
+        npm run type-check || npx tsc --noEmit
+
+  # Dependency Security Check
+  dependency-check:
+    runs-on: ubuntu-latest
+    name: Dependency Security Check
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Audit backend dependencies
+      run: |
+        cd backend
+        npm audit --audit-level=moderate
+
+    - name: Audit frontend dependencies
+      run: |
+        cd web
+        npm audit --audit-level=moderate
+
+  # Build Test
+  build-test:
+    runs-on: ubuntu-latest
+    name: Build Test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Test backend build
+      run: |
+        cd backend
+        npm ci
+        echo "Backend build test completed"
+
+    - name: Test frontend build
+      run: |
+        cd web
+        npm ci
+        npm run build
+
+    - name: Test Docker builds
+      run: |
+        docker build -t test-backend ./backend
+        docker build -t test-frontend ./web
+        docker rmi test-backend test-frontend
+
+  # PR Size Check
+  pr-size-check:
+    runs-on: ubuntu-latest
+    name: PR Size Check
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Check PR size
+      run: |
+        CHANGED_FILES=$(git diff --name-only origin/main...HEAD | wc -l)
+        ADDED_LINES=$(git diff --shortstat origin/main...HEAD | grep -oE '[0-9]+ insertions?' | grep -oE '[0-9]+' || echo "0")
+        DELETED_LINES=$(git diff --shortstat origin/main...HEAD | grep -oE '[0-9]+ deletions?' | grep -oE '[0-9]+' || echo "0")
+        
+        echo "📊 PR Statistics:"
+        echo "Files changed: $CHANGED_FILES"
+        echo "Lines added: $ADDED_LINES"
+        echo "Lines deleted: $DELETED_LINES"
+        
+        if [ "$CHANGED_FILES" -gt 50 ]; then
+          echo "⚠️ Warning: This PR changes more than 50 files. Consider breaking it into smaller PRs."
+        fi
+        
+        if [ "$ADDED_LINES" -gt 1000 ]; then
+          echo "⚠️ Warning: This PR adds more than 1000 lines. Consider breaking it into smaller PRs."
+        fi
+
+  # Comment PR Results
+  pr-comment:
+    runs-on: ubuntu-latest
+    name: PR Comment
+    needs: [code-quality, dependency-check, build-test, pr-size-check]
+    if: always()
+    
+    steps:
+    - name: Comment PR
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { data: checks } = await github.rest.checks.listForRef({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: context.sha
+          });
+          
+          const results = {
+            'code-quality': '${{ needs.code-quality.result }}',
+            'dependency-check': '${{ needs.dependency-check.result }}',
+            'build-test': '${{ needs.build-test.result }}',
+            'pr-size-check': '${{ needs.pr-size-check.result }}'
+          };
+          
+          let comment = '## 🔍 PR Quality Check Results\n\n';
+          
+          for (const [job, result] of Object.entries(results)) {
+            const emoji = result === 'success' ? '✅' : result === 'failure' ? '❌' : '⚠️';
+            comment += `${emoji} **${job}**: ${result}\n`;
+          }
+          
+          comment += '\n---\n';
+          comment += '💡 **Tips for a great PR:**\n';
+          comment += '- Keep PRs focused and small\n';
+          comment += '- Write clear commit messages\n';
+          comment += '- Add tests for new features\n';
+          comment += '- Update documentation if needed\n';
+          
+          if (context.eventName === 'pull_request') {
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          }
