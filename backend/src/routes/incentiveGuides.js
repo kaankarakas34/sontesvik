@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   getIncentiveGuide,
   getAllIncentiveGuides,
+  getAllIncentiveGuidesForAdmin,
   createIncentiveGuide,
   updateIncentiveGuide,
   publishIncentiveGuide,
@@ -21,6 +22,7 @@ router.get('/incentive/:incentiveId', getIncentiveGuide);
 router.use(authenticateToken);
 
 // Admin only routes
+router.get('/admin/all', requireRole(['admin']), getAllIncentiveGuidesForAdmin);
 router.post('/', requireRole(['admin']), createIncentiveGuide);
 router.put('/:id', requireRole(['admin']), updateIncentiveGuide);
 router.patch('/:id/publish', requireRole(['admin']), publishIncentiveGuide);

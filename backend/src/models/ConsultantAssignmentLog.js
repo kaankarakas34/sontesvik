@@ -35,7 +35,8 @@ module.exports = (sequelize) => {
       }
     },
     assignmentType: {
-      type: DataTypes.ENUM('manual', 'automatic'),
+      type: DataTypes.ENUM,
+      values: ['manual', 'automatic'],
       allowNull: false,
       field: 'assignment_type'
     },

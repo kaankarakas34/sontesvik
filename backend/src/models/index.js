@@ -37,7 +37,7 @@ const Ticket = require('./Ticket')(sequelize);
 const TicketMessage = require('./TicketMessage')(sequelize);
 const IncentiveGuide = require('./IncentiveGuide')(sequelize);
 const DocumentIncentiveMapping = require('./DocumentIncentiveMapping')(sequelize);
-const ConsultantAssignmentLog = require('./ConsultantAssignmentLog')(sequelize);
+// const ConsultantAssignmentLog = require('./ConsultantAssignmentLog')(sequelize);
 const ConsultantReview = require('./ConsultantReview')(sequelize);
 const ApplicationRoom = require('./ApplicationRoom')(sequelize);
 const ApplicationMessage = require('./ApplicationMessage')(sequelize);
@@ -68,7 +68,7 @@ module.exports = {
   TicketMessage,
   IncentiveGuide,
   DocumentIncentiveMapping,
-  ConsultantAssignmentLog,
+  // ConsultantAssignmentLog,
   ConsultantReview,
   ApplicationRoom,
   ApplicationMessage,

@@ -254,6 +254,16 @@ export const ticketsService = {
     }
   },
 
+  // Update ticket (admin/consultant)
+  async updateTicket(ticketId: string, data: Partial<Ticket>) {
+    try {
+      const response = await apiMethods.put(`/tickets/${ticketId}`, data)
+      return response.data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  },
+
   // Get ticket statistics (admin/consultant)
   async getTicketStats() {
     try {

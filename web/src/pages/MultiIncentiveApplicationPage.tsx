@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, MessageSquare, BookOpen, Upload, Download, CheckCircle, AlertCircle, Send, Eye, Trash2, ArrowLeft, FolderOpen } from 'lucide-react';
+import { FileText, MessageSquare, BookOpen, Upload, Download, CheckCircle, AlertCircle, Send, Eye, Trash2, ArrowLeft, FolderOpen, User, Star } from 'lucide-react';
 
 interface Incentive {
   id: string;
@@ -84,6 +84,12 @@ const MultiIncentiveApplicationPage: React.FC = () => {
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [activeTab, setActiveTab] = useState<'guides' | 'messages' | 'documents'>('guides');
   const [applicationId, setApplicationId] = useState<string>('');
+  const [consultantInfo, setConsultantInfo] = useState<{
+    id: string;
+    name: string;
+    email: string;
+    rating: number;
+  } | null>(null);
 
   useEffect(() => {
     console.log('=== COMPONENT MOUNTED ===');
@@ -124,6 +130,17 @@ const MultiIncentiveApplicationPage: React.FC = () => {
       if (applicationResponse.data) {
         console.log('Başvuru yüklendi:', applicationResponse.data);
         setApplicationId(appId);
+        
+        // Danışman bilgisini kontrol et ve kaydet
+        if (applicationResponse.data.assignedConsultant) {
+          const consultant = applicationResponse.data.assignedConsultant;
+          setConsultantInfo({
+            id: consultant.id,
+            name: `${consultant.firstName} ${consultant.lastName}`,
+            email: consultant.email,
+            rating: consultant.consultantRating || 0
+          });
+        }
         
         // 2. Başvuruya ait teşvikleri yükle
         if (applicationResponse.data.incentives && applicationResponse.data.incentives.length > 0) {
@@ -213,6 +230,21 @@ const MultiIncentiveApplicationPage: React.FC = () => {
       const response = await incentiveSelectionService.createApplicationWithIncentives(requestData);
       if (response.data?.id) {
         setApplicationId(response.data.id);
+        
+        // Danışman bilgisini kaydet
+        if (response.data.consultantAssignment?.consultant) {
+          const consultant = response.data.consultantAssignment.consultant;
+          setConsultantInfo({
+            id: consultant.id,
+            name: `${consultant.firstName} ${consultant.lastName}`,
+            email: consultant.email,
+            rating: consultant.consultantRating || 0
+          });
+          showToast(`Başvurunuz oluşturuldu ve ${consultant.firstName} ${consultant.lastName} danışmanınız olarak atandı.`, 'success');
+        } else {
+          showToast('Başvurunuz oluşturuldu ancak danışman ataması yapılamadı. Lütfen destek ekibiyle iletişime geçin.', 'warning');
+        }
+        
         return response.data.id;
       }
       return null;
@@ -605,6 +637,53 @@ const MultiIncentiveApplicationPage: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Danışman Bilgisi */}
+        {consultantInfo && (
+          <div className="mb-8">
+            <div className="bg-white rounded-2xl shadow-xl border border-green-100 overflow-hidden">
+              <div className="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4">
+                <h3 className="text-xl font-bold text-white flex items-center">
+                  <User className="w-5 h-5 mr-3" />
+                  Atanan Danışmanınız
+                </h3>
+              </div>
+              <div className="p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
+                    <User className="w-8 h-8 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-xl font-bold text-gray-900">{consultantInfo.name}</h4>
+                    <p className="text-gray-600">{consultantInfo.email}</p>
+                    <div className="flex items-center mt-2">
+                      <div className="flex items-center">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`w-4 h-4 ${
+                              i < Math.floor(consultantInfo.rating)
+                                ? 'text-yellow-400 fill-current'
+                                : 'text-gray-300'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span className="ml-2 text-sm text-gray-600">
+                        ({consultantInfo.rating.toFixed(1)})
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <Badge className="bg-green-100 text-green-700 hover:bg-green-200">
+                      Aktif Danışman
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Seçili Teşvikler - Modern Card Grid */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">

@@ -124,6 +124,7 @@ const getMyApplications = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const whereClause = { userId: req.user.id };
+
     const includeClause = [
       {
         model: Incentive,
@@ -162,6 +163,15 @@ const getMyApplications = async (req, res, next) => {
       distinct: true
     });
 
+    logger.info('My applications fetched successfully', {
+      userId: req.user.id,
+      userRole: req.user.role,
+      filters: { status, search, dateFrom, dateTo },
+      resultCount: applications.count,
+      page: parseInt(page),
+      limit: parseInt(limit)
+    });
+
     res.json({
       success: true,
       data: applications.rows,
@@ -173,6 +183,11 @@ const getMyApplications = async (req, res, next) => {
       }
     });
   } catch (error) {
+    logger.error('Error fetching my applications', {
+      userId: req.user.id,
+      userRole: req.user.role,
+      error: error.message
+    });
     next(error);
   }
 };
@@ -202,6 +217,22 @@ const getApplicationById = async (req, res, next) => {
           model: Incentive,
           as: 'incentive',
           attributes: ['id', 'title', 'description']
+        },
+        {
+          model: Document,
+          as: 'documents',
+          include: [
+            {
+              model: DocumentType,
+              as: 'type',
+              attributes: ['id', 'name', 'nameEn', 'code']
+            }
+          ]
+        },
+        {
+          model: User,
+          as: 'assignedConsultant',
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'consultantRating']
         }
       ]
     });
@@ -491,7 +522,7 @@ const getApplicationDocuments = async (req, res, next) => {
       include: [
         {
           model: DocumentType,
-          as: 'documentTypeInfo',
+          as: 'type',
           attributes: ['id', 'name', 'nameEn', 'code']
         }
       ],

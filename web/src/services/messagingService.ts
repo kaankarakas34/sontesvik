@@ -77,7 +77,8 @@ class MessagingService {
 
   // Send a new message
   async sendMessage(messageData: SendMessageData) {
-    const response = await apiMethods.post<{ success: boolean; data: Message }>(API_ENDPOINTS.MESSAGES.BASE, messageData);
+    const endpoint = API_ENDPOINTS.MESSAGES.APPLICATION(messageData.applicationId);
+    const response = await apiMethods.post<{ success: boolean; data: Message }>(endpoint, messageData);
     return response.data;
   }
 

@@ -1,6 +1,7 @@
-const { Document, IncentiveGuide, DocumentType } = require('../models');
+const { Document, IncentiveGuide, DocumentType, Application } = require('../models');
 const { Op } = require('sequelize');
 const logger = require('../utils/logger');
+const fs = require('fs');
 
 // Get documents uploaded by the current user for a specific incentive's requirements
 const getMyDocumentsForIncentive = async (req, res) => {
@@ -54,9 +55,8 @@ const getMyDocumentsForIncentive = async (req, res) => {
         model: DocumentType,
         as: 'type', // 'documentTypeInfo' yerine 'type' olarak güncellendi
         attributes: ['name', 'description'],
-      },
-      attributes: ['id', 'name']
       }],
+      attributes: ['id', 'name'],
       order: [['uploadedAt', 'DESC']]
     });
 
@@ -88,6 +88,102 @@ const getMyDocumentsForIncentive = async (req, res) => {
   }
 };
 
+// @desc    Upload document
+// @route   POST /api/documents/upload
+// @access  Private
+const uploadDocument = async (req, res, next) => {
+  try {
+    const { applicationId, documentType } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+
+    if (!applicationId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Application ID is required'
+      });
+    }
+
+    // Verify application exists and user has access
+    const application = await Application.findByPk(applicationId);
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: 'Application not found'
+      });
+    }
+
+    // Check if user can upload documents for this application
+    if (req.user.role !== 'admin' && application.userId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    // Find or create document type if provided
+    let documentTypeId = null;
+    if (documentType) {
+      const docType = await DocumentType.findOne({
+        where: { name: documentType }
+      });
+      if (docType) {
+        documentTypeId = docType.id;
+      }
+    }
+
+    // Create document record
+    const document = await Document.create({
+      originalName: req.file.originalname,
+      fileName: req.file.filename,
+      filePath: req.file.path,
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype,
+      documentTypeId: documentTypeId,
+      applicationId: applicationId,
+      userId: req.user.id,
+      status: 'pending'
+    });
+
+    res.status(201).json({
+      success: true,
+      data: document,
+      message: 'Document uploaded successfully'
+    });
+
+    logger.info('Document uploaded successfully', {
+      userId: req.user.id,
+      applicationId,
+      documentId: document.id,
+      fileName: req.file.originalname
+    });
+
+  } catch (error) {
+    // Clean up uploaded file if database operation fails
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    
+    logger.error('Error uploading document', {
+      userId: req.user.id,
+      applicationId: req.body.applicationId,
+      error: error.message,
+      stack: error.stack
+    });
+    
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload document'
+    });
+  }
+};
+
 module.exports = {
-  getMyDocumentsForIncentive
+  getMyDocumentsForIncentive,
+  uploadDocument
 };

@@ -10,7 +10,8 @@ interface IncentiveGuide {
   content: string;
   incentiveId: string;
   sectorId?: string;
-  isPublished: boolean;
+  isActive: boolean;
+  publishedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -31,19 +32,45 @@ const IncentiveGuidesPage: React.FC = () => {
   const fetchGuides = async () => {
     try {
       setLoading(true);
-      const response = await incentiveGuidesService.getIncentiveGuides();
+      console.log('[IncentiveGuidesPage] Fetching guides...');
+      console.log('[IncentiveGuidesPage] Token:', localStorage.getItem('token') ? 'exists' : 'missing');
+      console.log('[IncentiveGuidesPage] User:', localStorage.getItem('user') ? 'exists' : 'missing');
+      
+      const response = await incentiveGuidesService.getAllIncentiveGuidesForAdmin();
       console.log('[IncentiveGuidesPage] API response', response);
-      const list = Array.isArray((response as any)?.data?.guides)
-        ? (response as any).data.guides
-        : Array.isArray((response as any)?.data?.incentiveGuides)
-          ? (response as any).data.incentiveGuides
-          : Array.isArray((response as any)?.data)
-            ? (response as any).data
-            : [];
+      const list = Array.isArray((response as any)?.data)
+        ? (response as any).data
+        : [];
       console.log('[IncentiveGuidesPage] normalized list', list);
       setGuides(list);
       setError(null);
     } catch (err: any) {
+      console.error('[IncentiveGuidesPage] Error details:', err);
+      console.error('[IncentiveGuidesPage] Error response:', err.response);
+      console.error('[IncentiveGuidesPage] Error status:', err.response?.status);
+      console.error('[IncentiveGuidesPage] Error data:', err.response?.data);
+      console.error('[IncentiveGuidesPage] Error message:', err.message);
+      console.error('[IncentiveGuidesPage] Error config:', err.config);
+      console.error('[IncentiveGuidesPage] Error headers:', err.response?.headers);
+      
+      // Detaylı hata analizi
+      if (err.response?.data) {
+        console.error('[IncentiveGuidesPage] Detailed error data:', JSON.stringify(err.response.data, null, 2));
+        if (err.response.data.error) {
+          console.error('[IncentiveGuidesPage] Backend error object:', JSON.stringify(err.response.data.error, null, 2));
+        }
+      }
+      
+      // Token hatası durumunda yeniden login'e yönlendir
+      if (err.response?.status === 401 || err.message?.includes('Invalid token') || err.message?.includes('Not authorized')) {
+        console.log('[IncentiveGuidesPage] Authentication error, clearing tokens and redirecting to login');
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        return;
+      }
+      
       setError(err.message || 'Kılavuzlar yüklenirken bir hata oluştu.');
       toast.error('Kılavuzlar yüklenirken bir hata oluştu.');
     } finally {
@@ -72,9 +99,9 @@ const IncentiveGuidesPage: React.FC = () => {
     }
   };
 
-  const handlePublishToggle = async (guide: IncentiveGuide) => {
+  const handlePublishToggle = async (guide: any) => {
     try {
-      if (guide.isPublished) {
+      if (guide.isActive && guide.publishedAt) {
         await incentiveGuidesService.unpublishIncentiveGuide(guide.id);
         toast.success('Kılavuz yayından kaldırıldı.');
       } else {
@@ -93,9 +120,9 @@ const IncentiveGuidesPage: React.FC = () => {
       guide.incentiveId.toLowerCase().includes(searchTerm.toLowerCase());
     
     if (activeTab === 'published') {
-      return matchesSearch && guide.isPublished;
+      return matchesSearch && guide.isActive && guide.publishedAt;
     } else if (activeTab === 'draft') {
-      return matchesSearch && !guide.isPublished;
+      return matchesSearch && (!guide.isActive || !guide.publishedAt);
     }
     return matchesSearch;
   });
@@ -146,7 +173,7 @@ const IncentiveGuidesPage: React.FC = () => {
                   : 'text-red-600 hover:text-red-700'
               }`}
             >
-              Yayında ({guides.filter(g => g.isPublished).length})
+              Yayında ({guides.filter(g => g.isActive && g.publishedAt).length})
             </button>
             <button
               onClick={() => setActiveTab('draft')}
@@ -156,7 +183,7 @@ const IncentiveGuidesPage: React.FC = () => {
                   : 'text-red-600 hover:text-red-700'
               }`}
             >
-              Taslaklar ({guides.filter(g => !g.isPublished).length})
+              Taslaklar ({guides.filter(g => !g.isActive || !g.publishedAt).length})
             </button>
           </div>
         </div>
@@ -239,12 +266,12 @@ const IncentiveGuidesPage: React.FC = () => {
                         <button
                           onClick={() => handlePublishToggle(guide)}
                           className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium transition-colors duration-200 ${
-                            guide.isPublished
+                            guide.isActive && guide.publishedAt
                               ? 'bg-green-100 text-green-700 hover:bg-green-200'
                               : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
                           }`}
                         >
-                          {guide.isPublished ? (
+                          {guide.isActive && guide.publishedAt ? (
                             <>
                               <EyeIcon className="h-4 w-4" />
                               <span>Yayında</span>

@@ -92,10 +92,35 @@ class ConsultantService {
     return this.getConsultantDashboard();
   }
 
-  async getAssignedApplications(): Promise<ConsultantApplication[]> {
+  async getAssignedApplications(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+  }): Promise<{
+    applications: ConsultantApplication[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     try {
-      const response = await apiMethods.get(`${this.baseURL}/applications`);
-      return response.data.data;
+      const queryParams = new URLSearchParams();
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.limit) queryParams.append('limit', params.limit.toString());
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.search) queryParams.append('search', params.search);
+
+      const url = `${this.baseURL}/applications${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const response = await apiMethods.get(url);
+      
+      return {
+        applications: response.data.data.applications || response.data.data || [],
+        total: response.data.data.total || response.data.data.length || 0,
+        page: response.data.data.page || 1,
+        limit: response.data.data.limit || 10,
+        totalPages: response.data.data.totalPages || 1
+      };
     } catch (error) {
       logger.error('Error fetching assigned applications:', error);
       throw error;

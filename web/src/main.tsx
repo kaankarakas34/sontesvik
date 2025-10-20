@@ -37,7 +37,8 @@ const queryClient = new QueryClient({
 
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
+  // StrictMode geçici olarak devre dışı bırakıldı - findDOMNode uyarısı için
+  // <React.StrictMode>
     <HelmetProvider>
       <Provider store={store}>
         <QueryClientProvider client={queryClient}>
@@ -72,5 +73,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         </QueryClientProvider>
       </Provider>
     </HelmetProvider>
-  </React.StrictMode>
+  // </React.StrictMode>
 )

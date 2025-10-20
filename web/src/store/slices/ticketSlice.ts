@@ -14,9 +14,30 @@ const initialState: TicketState = {
   error: null,
 };
 
-export const getTickets = createAsyncThunk('tickets/getTickets', async () => {
-  const response = await ticketsService.getTickets();
-  return response;
+export const getTickets = createAsyncThunk('tickets/getTickets', async (_, { rejectWithValue }) => {
+  try {
+    const response = await ticketsService.getTickets();
+    console.log('getTickets response:', response);
+    
+    // Backend API'si success/data formatında response döndürüyor
+    if (response.success && response.data) {
+      return Array.isArray(response.data) ? response.data : [];
+    }
+    
+    // Eski format için fallback
+    return Array.isArray(response) ? response : [];
+  } catch (error: any) {
+    console.error('getTickets error details:', error);
+    
+    // Token hatası durumunda kullanıcıyı login sayfasına yönlendir
+    if (error.message?.includes('Invalid token') || error.message?.includes('Not authorized')) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      window.location.href = '/login';
+    }
+    
+    return rejectWithValue(error.message || 'Bir hata oluştu');
+  }
 });
 
 export const createTicket = createAsyncThunk('tickets/createTicket', async (ticketData: Omit<Ticket, 'id'>) => {
@@ -45,7 +66,7 @@ const ticketSlice = createSlice({
       })
       .addCase(getTickets.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || 'Failed to fetch tickets';
+        state.error = action.payload as string || 'Failed to fetch tickets';
       })
       .addCase(createTicket.fulfilled, (state, action) => {
         state.tickets.push(action.payload);

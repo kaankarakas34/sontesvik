@@ -141,6 +141,19 @@ export const applicationsService = {
     }
   },
 
+  // Download application document (returns Blob)
+  async downloadApplicationDocument(id: string, documentId: string): Promise<Blob> {
+    try {
+      const response = await apiMethods.get(
+        API_ENDPOINTS.APPLICATIONS.DOWNLOAD_DOCUMENT(id, documentId),
+        { responseType: 'blob' }
+      )
+      return response.data as Blob
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  },
+
   // Upload application document
   async uploadApplicationDocument(id: string, file: File, onProgress?: (progress: number) => void) {
     try {

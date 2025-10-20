@@ -19,6 +19,7 @@ module.exports = (sequelize) => {
     status: {
       type: DataTypes.ENUM(
         'draft',
+        'pending',
         'submitted',
         'under_review',
         'additional_info_required',
@@ -33,6 +34,7 @@ module.exports = (sequelize) => {
         isIn: {
           args: [[
             'draft',
+            'pending',
             'submitted',
             'under_review',
             'additional_info_required',
@@ -389,10 +391,10 @@ module.exports = (sequelize) => {
     });
 
     // Application has many ConsultantAssignmentLogs
-    Application.hasMany(models.ConsultantAssignmentLog, {
-      foreignKey: 'applicationId',
-      as: 'assignmentLogs'
-    });
+    // Application.hasMany(models.ConsultantAssignmentLog, {
+    //   foreignKey: 'applicationId',
+    //   as: 'consultantAssignments'
+    // });
 
     // Application has one ConsultantReview
     Application.hasOne(models.ConsultantReview, {

@@ -37,10 +37,19 @@ const createApiInstance = (store: any): AxiosInstance => { // store parametresi 
         const localToken = localStorage.getItem('token');
         const token = reduxToken || localToken;
         
+        console.log(`[API] Request to ${config.url} - Token found: ${!!token}`);
+        console.log(`[API] Redux token: ${!!reduxToken}, Local token: ${!!localToken}`);
+        console.log(`[API] Full token value:`, token ? `${token.substring(0, 20)}...` : 'null');
+        
         if (token) {
           config.headers = config.headers || {};
           config.headers.Authorization = `Bearer ${token}`;
+          console.log(`[API] Authorization header added to ${config.url}`);
+        } else {
+          console.log(`[API] No token found for ${config.url}`);
         }
+      } else {
+        console.log(`[API] Public endpoint detected: ${config.url}, skipping auth header`);
       }
 
       return config;
@@ -54,20 +63,35 @@ const createApiInstance = (store: any): AxiosInstance => { // store parametresi 
   // Response interceptor
   instance.interceptors.response.use(
     (response: AxiosResponse) => {
+      console.log(`[API] Response from ${response.config.url}:`, {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data
+      });
       return response;
     },
     async (error) => {
+      console.error(`[API] Error response from ${error.config?.url}:`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
+      
       const originalRequest = error.config;
 
       if (error.response?.status === 401 && !originalRequest._retry) {
+        console.log('[API] 401 error detected, attempting token refresh...');
         originalRequest._retry = true;
 
         try {
           // Get refresh token from Redux store first, then localStorage
           const currentState = store.getState();
           const refreshToken = currentState.auth?.refreshToken || localStorage.getItem('refreshToken');
+          console.log('[API] Refresh token found:', !!refreshToken);
 
           if (refreshToken) {
+            console.log('[API] Attempting to refresh token...');
             const response = await axios.post(
               `${API_CONFIG.BASE_URL}${API_ENDPOINTS.AUTH.REFRESH_TOKEN}`,
               { refreshToken },
@@ -81,6 +105,7 @@ const createApiInstance = (store: any): AxiosInstance => { // store parametresi 
 
             const { data } = response.data;
             if (data && data.accessToken) {
+              console.log('[API] Token refresh successful');
               localStorage.setItem('token', data.accessToken);
 
               // Redux store'u da güncelle
@@ -106,7 +131,7 @@ const createApiInstance = (store: any): AxiosInstance => { // store parametresi 
             }
           }
         } catch (refreshError) {
-          console.error('Token yenileme başarısız:', refreshError);
+          console.error('[API] Token yenileme başarısız:', refreshError);
           // Refresh failed, clear credentials and redirect to login
           localStorage.removeItem('token');
           localStorage.removeItem('refreshToken');

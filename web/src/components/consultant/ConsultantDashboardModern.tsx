@@ -75,13 +75,13 @@ const ConsultantDashboardModern: React.FC = () => {
           id: app.id,
           applicationNumber: app.applicationNumber,
           user: {
-            firstName: app.user.firstName,
-            lastName: app.user.lastName,
-            companyName: app.user.companyName,
+            firstName: app.user?.firstName || 'Bilinmeyen',
+            lastName: app.user?.lastName || 'Kullanıcı',
+            companyName: app.user?.companyName || 'Bilinmeyen Şirket',
           },
           incentive: {
-            title: app.incentive.title,
-            sector: app.user.sector || 'Genel',
+            title: app.incentive?.title || 'Teşvik Bilgisi Bulunamadı',
+            sector: app.user?.sector || 'Genel',
           },
           status: app.status,
           createdAt: app.submittedAt,
@@ -284,6 +284,7 @@ const ConsultantDashboardModern: React.FC = () => {
               color: 'red',
               trend: '+12%',
               trendUp: true,
+              onClick: () => navigate('/consultant/applications'),
             },
             {
               title: 'Tamamlanan İncelemeler',
@@ -316,7 +317,8 @@ const ConsultantDashboardModern: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300"
+              className={`bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300 ${stat.onClick ? 'cursor-pointer' : ''}`}
+              onClick={stat.onClick}
             >
               <div className="flex items-center justify-between">
                 <div>
@@ -344,95 +346,6 @@ const ConsultantDashboardModern: React.FC = () => {
               </div>
             </motion.div>
           ))}
-        </div>
-
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Performance Chart */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-white rounded-xl shadow-lg p-6"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Performans Trendi</h3>
-              <ChartBarIcon className="w-5 h-5 text-gray-500" />
-            </div>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={dashboardData?.performanceData || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" stroke="#666" />
-                <YAxis stroke="#666" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="completed"
-                  stroke="#DC2626"
-                  strokeWidth={3}
-                  dot={{ fill: '#DC2626', strokeWidth: 2, r: 4 }}
-                  activeDot={{ r: 6, stroke: '#DC2626', strokeWidth: 2 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </motion.div>
-
-          {/* Sector Distribution */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-white rounded-xl shadow-lg p-6"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Sektör Dağılımı</h3>
-              <BuildingOfficeIcon className="w-5 h-5 text-gray-500" />
-            </div>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={dashboardData?.sectorDistribution || []}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="count"
-                >
-                  {(dashboardData?.sectorDistribution || []).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="mt-4 space-y-2">
-              {(dashboardData?.sectorDistribution || []).map((sector, index) => (
-                <div key={sector.sector} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div
-                      className="w-3 h-3 rounded-full mr-2"
-                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                    />
-                    <span className="text-sm text-gray-600">{sector.sector}</span>
-                  </div>
-                  <span className="text-sm font-medium text-gray-900">{sector.percentage}%</span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
         </div>
 
         {/* Recent Applications */}
@@ -493,22 +406,18 @@ const ConsultantDashboardModern: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {application.user.firstName} {application.user.lastName}
-                        </div>
-                        {application.user.companyName && (
-                          <div className="text-sm text-gray-500">{application.user.companyName}</div>
-                        )}
+                      <div className="text-sm font-medium text-gray-900">
+                        {application.user.firstName} {application.user.lastName}
                       </div>
+                      {application.user.companyName && (
+                        <div className="text-sm text-gray-500">{application.user.companyName}</div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {application.incentive.title}
-                        </div>
-                        <div className="text-sm text-gray-500">{application.incentive.sector}</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {application.incentive?.title || 'Teşvik Bilgisi Bulunamadı'}
                       </div>
+                      <div className="text-sm text-gray-500">{application.incentive?.sector || 'Genel'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(application.status)}`}>

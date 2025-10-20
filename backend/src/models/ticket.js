@@ -13,6 +13,7 @@ module.exports = (sequelize) => {
       Ticket.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
       Ticket.belongsTo(models.Incentive, { foreignKey: 'incentiveId', as: 'incentive' });
       Ticket.belongsTo(models.User, { foreignKey: 'consultantId', as: 'consultant' });
+      Ticket.belongsTo(models.Sector, { foreignKey: 'sectorId', as: 'sector' }); // Bu satırı ekledim
       Ticket.hasMany(models.TicketMessage, { foreignKey: 'ticketId', as: 'messages' });
     }
   }
@@ -45,7 +46,7 @@ module.exports = (sequelize) => {
         type: DataTypes.UUID
     },
     sectorId: {
-        type: DataTypes.INTEGER
+        type: DataTypes.UUID
     }
   }, {
     sequelize,

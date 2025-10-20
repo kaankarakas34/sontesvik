@@ -178,6 +178,21 @@ module.exports = (sequelize) => {
     ]
   });
 
+  // Instance methods
+  IncentiveGuide.prototype.publish = function() {
+    return this.update({
+      publishedAt: new Date(),
+      isActive: true
+    });
+  };
+
+  IncentiveGuide.prototype.unpublish = function() {
+    return this.update({
+      publishedAt: null,
+      isActive: false
+    });
+  };
+
   // Define associations
   IncentiveGuide.associate = function(models) {
     IncentiveGuide.belongsTo(models.User, {

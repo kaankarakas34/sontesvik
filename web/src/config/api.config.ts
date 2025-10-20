@@ -1,7 +1,8 @@
 // API Configuration
 export const API_CONFIG = {
   // Base URL - Environment variable ile yönetiliyor
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5002/api',
+  // Development'da Vite proxy kullanıyoruz, production'da direkt backend URL
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : 'http://127.0.0.1:5002/api'),
   
   // Timeout settings
   TIMEOUT: 30000, // 30 seconds
@@ -77,6 +78,7 @@ export const API_ENDPOINTS = {
     CATEGORIES: '/incentives/categories',
     BY_CATEGORY: (categoryId: string) => `/incentives/category/${categoryId}`,
     GUIDES: '/incentive-guides',
+    GUIDES_BY_ID: (id: string) => `/incentive-guides/${id}`,
   },
   
   // Applications
@@ -89,7 +91,8 @@ export const API_ENDPOINTS = {
     REJECT: (id: string) => `/applications/${id}/reject`,
     STATS: '/applications/stats',
     DOCUMENTS: (id: string) => `/applications/${id}/documents`,
-    UPLOAD_DOCUMENT: (id: string) => `/applications/${id}/documents/upload`,
+    UPLOAD_DOCUMENT: (id: string) => `/applications/${id}/documents`,
+    DOWNLOAD_DOCUMENT: (id: string, documentId: string) => `/applications/${id}/documents/${documentId}/download`,
   },
 
   // Multi-Incentive Applications

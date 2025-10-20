@@ -136,5 +136,14 @@ module.exports = (sequelize) => {
     ]
   });
 
+  // Define associations
+  DocumentType.associate = function(models) {
+    // DocumentType has many Documents
+    DocumentType.hasMany(models.Document, {
+      foreignKey: 'documentTypeId',
+      as: 'documents'
+    });
+  };
+
   return DocumentType;
 };

@@ -66,6 +66,7 @@ import Support from './pages/user/Support';
 import Documents from './pages/user/Documents';
 import MemberDashboard from './pages/MemberDashboard';
 import ConsultantDashboard from './pages/ConsultantDashboard';
+import AssignedApplicationsPage from './pages/consultant/AssignedApplicationsPage';
 import NotificationPage from './pages/NotificationPage';
 
 // Admin pages
@@ -279,6 +280,7 @@ function App() {
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="member/dashboard" element={<MemberDashboard />} />
           <Route path="consultant/dashboard" element={<ConsultantDashboard />} />
+          <Route path="consultant/applications" element={<AssignedApplicationsPage />} />
           <Route path="user-dashboard" element={<MemberDashboard />} />
           <Route path="incentives" element={<IncentivesPage />} />
           <Route path="browse-incentives" element={<BrowseIncentivesPage />} />
@@ -294,6 +296,7 @@ function App() {
           <Route path="applications/:applicationId/room" element={<ApplicationRoomPage />} />
           <Route path="notifications" element={<NotificationPage />} />
           <Route path="support" element={<Support />} />
+          <Route path="support/tickets" element={<TicketsPage />} />
           <Route path="documents" element={<Documents />} />
            <Route path="tickets" element={<TicketsPage />} />
            <Route path="tickets/new" element={<NewTicketPage />} />

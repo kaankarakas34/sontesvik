@@ -1,4 +1,4 @@
-const { Application, User, ConsultantAssignmentLog, ConsultantReview } = require('../models');
+const { Application, User, Incentive, /* ConsultantAssignmentLog, */ ConsultantReview } = require('../models');
 const ConsultantAssignmentService = require('../services/consultantAssignmentService');
 const ApplicationRoomService = require('../services/applicationRoomService');
 const { Op } = require('sequelize');
@@ -109,7 +109,7 @@ class ConsultantController {
         order: [['createdAt', 'DESC']],
         include: [
           { model: User, as: 'user', attributes: ['id','firstName','lastName','email','companyName'] },
-          { model: require('../models').Incentive, as: 'incentive', attributes: ['id','title','description'] }
+          { model: Incentive, as: 'incentive', attributes: ['id','title','description'] }
         ]
       });
 
@@ -236,7 +236,7 @@ class ConsultantController {
             attributes: ['id', 'firstName', 'lastName', 'email', 'companyName', 'sector', 'phone']
           },
           {
-            model: require('../models/Incentive'),
+            model: Incentive,
             as: 'incentive'
           }
         ],
@@ -298,7 +298,7 @@ class ConsultantController {
             attributes: ['id', 'firstName', 'lastName', 'email', 'companyName', 'sector', 'phone', 'address']
           },
           {
-            model: require('../models/Incentive'),
+            model: Incentive,
             as: 'incentive'
           },
           {

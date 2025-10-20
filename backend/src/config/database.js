@@ -18,7 +18,7 @@ const config = {
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 5433,
     dialect: 'postgres',
-    logging: process.env.NODE_ENV === 'development' ? (msg) => logger.debug(msg) : false,
+    logging: false, // SQL loglarını kapat
     pool: {
       max: 5,
       min: 0,

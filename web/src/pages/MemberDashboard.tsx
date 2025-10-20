@@ -315,12 +315,6 @@ const MemberDashboard: React.FC = () => {
       color: 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800'
     },
     {
-      title: 'Başvuru Yap',
-      icon: <DocumentTextIcon className="h-6 w-6" />,
-      onClick: () => navigate('/incentive-selection'),
-      color: 'bg-red-600 hover:bg-red-700'
-    },
-    {
       title: 'Ticket',
       icon: <TicketIcon className="h-6 w-6" />,
       onClick: () => navigate('/support/tickets'),
@@ -367,7 +361,7 @@ const MemberDashboard: React.FC = () => {
             </div>
 
             {/* Header Buttons */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {headerButtons.map((button, index) => (
                 <motion.button
                   key={index}

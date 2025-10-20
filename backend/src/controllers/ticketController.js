@@ -36,9 +36,20 @@ exports.createTicket = async (req, res) => {
       await TicketMessage.createAssignmentMessage(ticket.id, consultant.firstName + ' ' + consultant.lastName, userId);
     }
 
-    res.status(201).json(ticket);
+    res.status(201).json({
+      success: true,
+      data: ticket,
+      message: 'Ticket created successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error creating ticket:', error);
+    res.status(500).json({ 
+      success: false,
+      error: { 
+        message: 'An error occurred while creating ticket',
+        details: error.message 
+      }
+    });
   }
 };
 
@@ -56,46 +67,123 @@ exports.getAllTickets = async (req, res) => {
       whereClause = {
         [Op.or]: [
           { consultantId: user.id },
-          { type: 'consultant', sectorId: user.sectorId, status: 'open' }
+          { type: 'consultant', sectorId: user.sector?.id || user.sectorId, status: 'open' }
         ]
       };
     } else if (user.role !== 'admin'){
       // if not admin, and not member or consultant, then unauthorized
-        return res.status(403).json({ error: 'Unauthorized' });
+        return res.status(403).json({ 
+          success: false,
+          error: { message: 'Unauthorized' }
+        });
     }
 
-    const tickets = await Ticket.findAll({ 
-        where: whereClause,
-        include: [
-            { model: User, as: 'user', attributes: ['id', 'firstName', 'lastName'] },
-            { model: User, as: 'consultant', attributes: ['id', 'firstName', 'lastName'] },
-            { model: Sector, as: 'sector', attributes: ['id', 'name'] }
-        ]
-    });
-    res.status(200).json(tickets);
+    try {
+      const tickets = await Ticket.findAll({ 
+          where: whereClause,
+          include: [
+              { 
+                model: User, 
+                as: 'user', 
+                attributes: ['id', 'firstName', 'lastName'],
+                required: false
+              },
+              { 
+                model: User, 
+                as: 'consultant', 
+                attributes: ['id', 'firstName', 'lastName'],
+                required: false
+              }
+          ],
+          order: [['createdAt', 'DESC']]
+      });
+      
+      const plainTickets = tickets.map(ticket => ticket.get({ plain: true }));
+      
+      res.status(200).json({
+        success: true,
+        data: plainTickets,
+        count: plainTickets.length
+      });
+    } catch (error) {
+      console.error('Error in findAll:', error);
+      res.status(500).json({ 
+        success: false,
+        error: { 
+          message: 'An error occurred while fetching tickets',
+          details: error.message 
+        }
+      });
+    }
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error in getAllTickets:', error);
+    res.status(500).json({ 
+      success: false,
+      error: { message: error.message }
+    });
   }
 };
 
-// Get ticket by ID
+// Get a specific ticket by ID
 exports.getTicketById = async (req, res) => {
   try {
     const { id } = req.params;
+    const { user } = req;
+
     const ticket = await Ticket.findByPk(id, {
-        include: [
-            { model: User, as: 'user', attributes: ['id', 'firstName', 'lastName'] },
-            { model: User, as: 'consultant', attributes: ['id', 'firstName', 'lastName'] },
-            { model: Sector, as: 'sector', attributes: ['id', 'name'] }
-        ]
+      include: [
+        { 
+          model: User, 
+          as: 'user', 
+          attributes: ['id', 'firstName', 'lastName'],
+          required: false
+        },
+        { 
+          model: User, 
+          as: 'consultant', 
+          attributes: ['id', 'firstName', 'lastName'],
+          required: false
+        }
+      ]
     });
-    if (ticket) {
-      res.status(200).json(ticket);
-    } else {
-      res.status(404).json({ error: 'Ticket not found' });
+
+    if (!ticket) {
+      return res.status(404).json({ 
+        success: false,
+        error: { message: 'Ticket not found' }
+      });
     }
+
+    // Check if user has permission to view this ticket
+    if (user.role === 'member' && ticket.userId !== user.id) {
+      return res.status(403).json({ 
+        success: false,
+        error: { message: 'Unauthorized to view this ticket' }
+      });
+    }
+
+    if (user.role === 'consultant' && 
+        ticket.consultantId !== user.id && 
+        ticket.sectorId !== (user.sector?.id || user.sectorId)) {
+      return res.status(403).json({ 
+        success: false,
+        error: { message: 'Unauthorized to view this ticket' }
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: ticket.get({ plain: true })
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error fetching ticket:', error);
+    res.status(500).json({ 
+      success: false,
+      error: { 
+        message: 'An error occurred while fetching ticket',
+        details: error.message 
+      }
+    });
   }
 };
 
@@ -103,17 +191,68 @@ exports.getTicketById = async (req, res) => {
 exports.updateTicket = async (req, res) => {
   try {
     const { id } = req.params;
-    const [updated] = await Ticket.update(req.body, {
-      where: { id: id },
-    });
-    if (updated) {
-      const updatedTicket = await Ticket.findByPk(id);
-      res.status(200).json(updatedTicket);
-    } else {
-      res.status(404).json({ error: 'Ticket not found' });
+    const { user } = req;
+    const updates = req.body;
+
+    const ticket = await Ticket.findByPk(id);
+
+    if (!ticket) {
+      return res.status(404).json({ 
+        success: false,
+        error: { message: 'Ticket not found' }
+      });
     }
+
+    // Check if user has permission to update this ticket
+    if (user.role === 'member' && ticket.userId !== user.id) {
+      return res.status(403).json({ 
+        success: false,
+        error: { message: 'Unauthorized to update this ticket' }
+      });
+    }
+
+    if (user.role === 'consultant' && 
+        ticket.consultantId !== user.id && 
+        ticket.sectorId !== (user.sector?.id || user.sectorId)) {
+      return res.status(403).json({ 
+        success: false,
+        error: { message: 'Unauthorized to update this ticket' }
+      });
+    }
+
+    await ticket.update(updates);
+
+    const updatedTicket = await Ticket.findByPk(id, {
+      include: [
+        { 
+          model: User, 
+          as: 'user', 
+          attributes: ['id', 'firstName', 'lastName'],
+          required: false
+        },
+        { 
+          model: User, 
+          as: 'consultant', 
+          attributes: ['id', 'firstName', 'lastName'],
+          required: false
+        }
+      ]
+    });
+
+    res.status(200).json({
+      success: true,
+      data: updatedTicket.get({ plain: true }),
+      message: 'Ticket updated successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error updating ticket:', error);
+    res.status(500).json({ 
+      success: false,
+      error: { 
+        message: 'An error occurred while updating ticket',
+        details: error.message 
+      }
+    });
   }
 };
 
@@ -121,15 +260,50 @@ exports.updateTicket = async (req, res) => {
 exports.deleteTicket = async (req, res) => {
   try {
     const { id } = req.params;
-    const deleted = await Ticket.destroy({
+    const { user } = req;
+
+    const ticket = await Ticket.findByPk(id);
+
+    if (!ticket) {
+      return res.status(404).json({ 
+        success: false,
+        error: { message: 'Ticket not found' }
+      });
+    }
+
+    // Check if user has permission to delete this ticket
+    if (user.role === 'member' && ticket.userId !== user.id) {
+      return res.status(403).json({ 
+        success: false,
+        error: { message: 'Unauthorized to delete this ticket' }
+      });
+    }
+
+    if (user.role === 'consultant' && 
+        ticket.consultantId !== user.id && 
+        ticket.sectorId !== (user.sector?.id || user.sectorId)) {
+      return res.status(403).json({ 
+        success: false,
+        error: { message: 'Unauthorized to delete this ticket' }
+      });
+    }
+
+    await Ticket.destroy({
       where: { id: id },
     });
-    if (deleted) {
-      res.status(204).send();
-    } else {
-      res.status(404).json({ error: 'Ticket not found' });
-    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Ticket deleted successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error deleting ticket:', error);
+    res.status(500).json({ 
+      success: false,
+      error: { 
+        message: 'An error occurred while deleting ticket',
+        details: error.message 
+      }
+    });
   }
 };

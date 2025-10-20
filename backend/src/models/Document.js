@@ -1,5 +1,7 @@
 const { DataTypes } = require('sequelize');
 
+// Trigger nodemon restart
+
 module.exports = (sequelize) => {
   const Document = sequelize.define('Document', {
     id: {
@@ -129,34 +131,11 @@ module.exports = (sequelize) => {
       allowNull: true,
       field: 'expiry_date' // Map to database column
     },
-    uploadedAt: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: DataTypes.NOW,
-      field: 'uploaded_at' // Map to database column
-    },
-    verifiedAt: {
-      type: DataTypes.DATE,
-      allowNull: true,
-      field: 'verified_at' // Map to database column
-    },
-    downloadCount: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0,
-      field: 'download_count' // Map to database column
-    },
-    checksum: {
-      type: DataTypes.STRING(64),
-      allowNull: true,
-      comment: 'SHA-256 checksum for file integrity'
-    },
-    metadata: {
-      type: DataTypes.JSONB,
-      allowNull: true,
-      defaultValue: {},
-      comment: 'Additional metadata like image dimensions, document pages, etc.'
-    },
+
+
+
+
+
     userId: {
       type: DataTypes.UUID,
       allowNull: false,
@@ -175,26 +154,18 @@ module.exports = (sequelize) => {
         key: 'id'
       }
     },
-    verifiedBy: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      field: 'verified_by', // Map to database column
-      references: {
-        model: 'users',
-        key: 'id'
-      }
-    },
+
     archivedAt: {
       type: DataTypes.DATE,
       allowNull: true,
-      field: 'archived_at', // Map to database column
+      field: 'archivedAt',
       comment: 'Date when the document was archived'
     },
     archivedReason: {
       type: DataTypes.TEXT,
       allowNull: true,
-      field: 'archived_reason', // Map to database column
-      comment: 'Reason why the document was archived'
+      field: 'archivedReason',
+      comment: 'Reason for archiving the document'
     }
   }, {
     tableName: 'Documents', // Use correct table name with capital D
@@ -215,9 +186,6 @@ module.exports = (sequelize) => {
       },
       {
         fields: ['application_id']
-      },
-      {
-        fields: ['uploaded_at']
       },
       {
         fields: ['status', 'user_id']
@@ -266,11 +234,9 @@ module.exports = (sequelize) => {
     return this.increment('downloadCount');
   };
 
-  Document.prototype.markAsVerified = async function(verifiedBy) {
+  Document.prototype.markAsVerified = async function(userId) {
     return this.update({
-      status: 'approved',
-      verifiedAt: new Date(),
-      verifiedBy: verifiedBy
+      status: 'approved'
     });
   };
 
@@ -339,14 +305,9 @@ module.exports = (sequelize) => {
     // Document belongs to DocumentType
     Document.belongsTo(models.DocumentType, {
       foreignKey: 'documentTypeId',
-      as: 'documentTypeInfo'
+      as: 'type'
     });
 
-    // Document belongs to User (verifier)
-    Document.belongsTo(models.User, {
-      foreignKey: 'verifiedBy',
-      as: 'verifier'
-    });
   };
 
   return Document;

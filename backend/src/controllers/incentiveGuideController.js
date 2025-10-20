@@ -76,7 +76,7 @@ const getIncentiveGuide = async (req, res) => {
   }
 };
 
-// Get all active incentive guides
+// Get all active incentive guides (public)
 const getAllIncentiveGuides = async (req, res) => {
   try {
     const { page = 1, limit = 10, search } = req.query;
@@ -127,6 +127,57 @@ const getAllIncentiveGuides = async (req, res) => {
   } catch (error) {
     logger.error('Error fetching incentive guides', { error: error.message, stack: error.stack });
     console.error('Error fetching incentive guides:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Teşvik klavuzları getirilirken bir hata oluştu',
+      error: error.message
+    });
+  }
+};
+
+// Get all incentive guides for admin (includes inactive)
+const getAllIncentiveGuidesForAdmin = async (req, res) => {
+  try {
+    const { page = 1, limit = 50, search } = req.query;
+    const offset = (page - 1) * limit;
+
+    const whereClause = {};
+    
+    if (search) {
+      whereClause[Op.or] = [
+        { title: { [Op.iLike]: `%${search}%` } },
+        { content: { [Op.iLike]: `%${search}%` } }
+      ];
+    }
+
+    logger.info('Listing all incentive guides for admin', { page, limit, offset, search, where: whereClause });
+    const { count, rows: guides } = await IncentiveGuide.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: Incentive,
+          as: 'incentive',
+          attributes: ['id', 'title', 'description', 'incentive_type', 'max_amount', 'min_amount']
+        },
+        {
+          model: User,
+          as: 'creator',
+          attributes: ['id', 'firstName', 'lastName']
+        }
+      ],
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+
+    logger.info('All incentive guides fetched for admin', { count, returned: guides.length });
+    res.json({
+      success: true,
+      data: guides
+    });
+  } catch (error) {
+    logger.error('Error fetching all incentive guides for admin', { error: error.message, stack: error.stack });
+    console.error('Error fetching all incentive guides for admin:', error);
     res.status(500).json({
       success: false,
       message: 'Teşvik klavuzları getirilirken bir hata oluştu',
@@ -372,6 +423,7 @@ const deleteIncentiveGuide = async (req, res) => {
 module.exports = {
   getIncentiveGuide,
   getAllIncentiveGuides,
+  getAllIncentiveGuidesForAdmin,
   createIncentiveGuide,
   updateIncentiveGuide,
   publishIncentiveGuide,

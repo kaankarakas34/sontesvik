@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
 import { applicationsService } from '../services/applicationsService';
 import { applicationRoomsService } from '../services/applicationRoomsService';
 import { applicationMessagesService } from '../services/applicationMessagesService';
@@ -9,41 +11,49 @@ import ApplicationIncentivesList from '../components/ApplicationIncentivesList';
 const ApplicationDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useSelector((state: RootState) => state.auth);
   const [app, setApp] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'messages' | 'guides'>('overview');
   const [messages, setMessages] = useState<any[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
-  const [messageSending, setMessageSending] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
-  const [incentiveGuides, setIncentiveGuides] = useState<any[]>([]);
-  const [guidesLoading, setGuidesLoading] = useState(false);
   const [messageForm, setMessageForm] = useState({
     subject: '',
     message: '',
     messageType: '',
     priority: ''
   });
+  const [messageSending, setMessageSending] = useState(false);
+  const [guides, setGuides] = useState<any[]>([]);
+  const [guidesLoading, setGuidesLoading] = useState(false);
+
+  // Kullanıcı rolünü kontrol et
+  const isConsultant = user?.role === 'consultant';
+  const isAdmin = user?.role === 'admin';
+  const isUser = user?.role === 'member';
 
   const fetchIncentiveGuides = async (incentives: any[]) => {
     if (!incentives || incentives.length === 0) return;
     
     try {
       setGuidesLoading(true);
-      const guides = [];
+      const allGuides: any[] = [];
       
       for (const incentive of incentives) {
         try {
-          const guide = await incentiveGuidesService.getIncentiveGuideById(incentive.id);
-          if (guide) {
-            guides.push({ ...guide, incentive });
+          const guidesData = await incentiveGuidesService.getByIncentive(incentive.id);
+          if (Array.isArray(guidesData)) {
+            allGuides.push(...guidesData);
+          } else if (guidesData?.data && Array.isArray(guidesData.data)) {
+            allGuides.push(...guidesData.data);
           }
         } catch (err) {
-          console.warn(`Guide not found for incentive ${incentive.id}:`, err);
+          console.warn(`Could not fetch guides for incentive ${incentive.id}:`, err);
         }
       }
       
-      setIncentiveGuides(guides);
+      setGuides(allGuides);
     } catch (error) {
       console.error('Error fetching incentive guides:', error);
     } finally {
@@ -126,7 +136,15 @@ const ApplicationDetailPage: React.FC = () => {
         <div className="text-center">
           <p className="text-red-600">{error}</p>
           <button
-            onClick={() => navigate('/applications')}
+            onClick={() => {
+              if (isConsultant) {
+                navigate('/consultant/applications');
+              } else if (isAdmin) {
+                navigate('/admin/applications');
+              } else {
+                navigate('/applications');
+              }
+            }}
             className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
           >
             Geri Dön
@@ -142,7 +160,15 @@ const ApplicationDetailPage: React.FC = () => {
         <div className="text-center">
           <p className="text-gray-500">Başvuru bulunamadı.</p>
           <button
-            onClick={() => navigate('/applications')}
+            onClick={() => {
+              if (isConsultant) {
+                navigate('/consultant/applications');
+              } else if (isAdmin) {
+                navigate('/admin/applications');
+              } else {
+                navigate('/applications');
+              }
+            }}
             className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
           >
             Geri Dön
@@ -158,7 +184,15 @@ const ApplicationDetailPage: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900">Başvuru Detayı</h1>
         <div className="flex gap-2">
           <button
-            onClick={() => navigate('/applications')}
+            onClick={() => {
+              if (isConsultant) {
+                navigate('/consultant/applications');
+              } else if (isAdmin) {
+                navigate('/admin/applications');
+              } else {
+                navigate('/applications');
+              }
+            }}
             className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             Geri
@@ -181,26 +215,6 @@ const ApplicationDetailPage: React.FC = () => {
               Genel Bakış
             </button>
             <button
-              onClick={() => setActiveTab('incentives')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'incentives'
-                  ? 'border-red-500 text-red-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Teşvikler
-            </button>
-            <button
-              onClick={() => setActiveTab('guides')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'guides'
-                  ? 'border-red-500 text-red-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Kılavuzlar
-            </button>
-            <button
               onClick={() => setActiveTab('documents')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'documents'
@@ -219,6 +233,16 @@ const ApplicationDetailPage: React.FC = () => {
               }`}
             >
               Mesajlar
+            </button>
+            <button
+              onClick={() => setActiveTab('guides')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'guides'
+                  ? 'border-red-500 text-red-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Rehberler
             </button>
           </nav>
         </div>
@@ -295,6 +319,52 @@ const ApplicationDetailPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="text-gray-500">Kullanıcı bilgisi bulunamadı.</div>
+              )}
+            </div>
+
+            {/* Atanan Danışman */}
+            <div className="bg-white shadow rounded-lg p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Atanan Danışman</h2>
+              {app.assignedConsultant ? (
+                <div className="space-y-2">
+                  <div className="font-medium">{app.assignedConsultant.firstName} {app.assignedConsultant.lastName}</div>
+                  <div className="text-gray-700">{app.assignedConsultant.email}</div>
+                  {app.assignedConsultant.phone && <div className="text-gray-700">{app.assignedConsultant.phone}</div>}
+                  {app.assignedConsultant.consultantRating && (
+                    <div className="flex items-center space-x-1">
+                      <span className="text-sm text-gray-500">Puan:</span>
+                      <div className="flex items-center">
+                        {[...Array(5)].map((_, i) => (
+                          <svg
+                            key={i}
+                            className={`h-4 w-4 ${
+                              i < Math.floor(app.assignedConsultant.consultantRating)
+                                ? 'text-yellow-400'
+                                : 'text-gray-300'
+                            }`}
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        ))}
+                        <span className="ml-1 text-sm text-gray-600">
+                          ({app.assignedConsultant.consultantRating.toFixed(1)})
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="mt-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Aktif Danışman
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-gray-500">
+                  <p>Henüz danışman atanmamış.</p>
+                  <p className="text-sm mt-1">Başvurunuz işleme alındığında size bir danışman atanacaktır.</p>
+                </div>
               )}
             </div>
 
@@ -457,7 +527,21 @@ const ApplicationDetailPage: React.FC = () => {
                     </div>
                   </div>
                   <button
-                    onClick={() => navigate(`/applications/${app.id}/documents/${doc.id}/download`)}
+                    onClick={async () => {
+                      try {
+                        const blob = await applicationsService.downloadApplicationDocument(app.id, doc.id);
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = doc.originalName || 'document';
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                      } catch (e: any) {
+                        alert(e?.message || 'Belge indirilirken hata oluştu');
+                      }
+                    }}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                   >
                     İndir

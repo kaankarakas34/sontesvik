@@ -504,8 +504,8 @@ module.exports = (sequelize) => {
     User.hasMany(models.Application, { foreignKey: 'assignedConsultantId', as: 'assignedApplications' });
     User.hasMany(models.ConsultantReview, { foreignKey: 'consultantId', as: 'consultantReviews' });
     User.hasMany(models.ConsultantReview, { foreignKey: 'reviewerId', as: 'givenReviews' });
-    User.hasMany(models.ConsultantAssignmentLog, { foreignKey: 'consultantId', as: 'assignmentLogs' });
-    User.hasMany(models.ConsultantAssignmentLog, { foreignKey: 'assignedBy', as: 'assignedConsultants' });
+    // User.hasMany(models.ConsultantAssignmentLog, { foreignKey: 'consultantId', as: 'assignmentLogs' });
+    // User.hasMany(models.ConsultantAssignmentLog, { foreignKey: 'assignedBy', as: 'assignedConsultants' });
     
     // Sector relation
     User.belongsTo(models.Sector, { foreignKey: 'sector_id', as: 'sector' });

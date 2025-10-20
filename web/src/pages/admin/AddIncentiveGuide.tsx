@@ -4,6 +4,12 @@ import { ArrowLeftIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-toastify';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+
+// ReactQuill ref wrapper to avoid findDOMNode warnings
+const ReactQuillWrapper = React.forwardRef<any, any>((props, ref) => {
+  return <ReactQuill {...props} ref={ref} />;
+});
+ReactQuillWrapper.displayName = 'ReactQuillWrapper';
 import { incentiveGuidesService } from '../../services/incentiveGuidesService';
 import { sectorsService } from '../../services/sectorsService';
 import { incentivesService } from '../../services/incentivesService';
@@ -26,7 +32,7 @@ interface Incentive {
 
 const AddIncentiveGuide: React.FC = () => {
   const navigate = useNavigate();
-  const quillRef = useRef<ReactQuill>(null);
+  const quillRef = useRef<any>(null);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [incentives, setIncentives] = useState<Incentive[]>([]);
   const [filteredIncentives, setFilteredIncentives] = useState<Incentive[]>([]);
@@ -270,7 +276,7 @@ const AddIncentiveGuide: React.FC = () => {
                 İçerik *
               </label>
               <div className="border border-gray-300 rounded-md">
-                <ReactQuill
+                <ReactQuillWrapper
                   ref={quillRef}
                   theme="snow"
                   value={formData.content}
