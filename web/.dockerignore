@@ -14,7 +14,6 @@ yarn-error.log*
 .vscode
 coverage
 .nyc_output
-dist
 build
 .tmp
 .cache

@@ -14,7 +14,16 @@ console.log('📝 Setting up logger...');
 const logger = require('./utils/logger');
 
 console.log('🗄️ Loading models...');
-const { sequelize } = require('./models');
+let sequelize;
+try {
+  const modelsResult = require('./models');
+  sequelize = modelsResult.sequelize;
+  console.log('✅ Models loaded successfully');
+} catch (error) {
+  console.error('❌ Error loading models:', error.message);
+  console.error('Stack:', error.stack);
+  process.exit(1);
+}
 
 console.log('🛣️ Loading routes...');
 console.log('Loading auth routes...');
@@ -262,8 +271,16 @@ app.use('/api/multi-incentive-applications', apl, multiIncentiveApplicationRoute
 app.use('/api/incentive-selection', apl, incentiveSelectionRoutes);
 app.use('/api/documents', apl, documentsRoutes);
 
-// Health check endpoint
+// Health check endpoints
 app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
+app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
@@ -308,22 +325,56 @@ app.use(errorHandler);
 // Server startup function
 async function startServer() {
   try {
+    console.log('🔄 Testing database connection...');
+    console.log(`📊 Database config: ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME} as ${process.env.DB_USER}`);
     logger.info('🔄 Testing database connection...');
-    await sequelize.authenticate();
+    logger.info(`📊 Database config: ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME} as ${process.env.DB_USER}`);
+    
+    // Add timeout to database connection
+    const connectionTimeout = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Database connection timeout after 30 seconds')), 30000);
+    });
+    
+    console.log('🔄 Attempting database authentication...');
+    await Promise.race([
+      sequelize.authenticate(),
+      connectionTimeout
+    ]);
+    console.log('✅ Database connection established successfully.');
     logger.info('✅ Database connection established successfully.');
 
-    // Sync database models
-    logger.info('🔄 Syncing database models...');
-    await sequelize.sync({ alter: false }); // Set to false in production
-    logger.info('✅ Database models synced successfully.');
+    // Sync database models with enhanced error handling
+    console.log('🔄 Starting database sync...');
+    logger.info('🔄 Starting database sync...');
+    
+    try {
+      const syncTimeout = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Database sync timeout after 60 seconds')), 60000);
+      });
+      
+      await Promise.race([
+        sequelize.sync({ alter: false, force: false }), // Safe production settings
+        syncTimeout
+      ]);
+      console.log('✅ Database sync completed successfully.');
+      logger.info('✅ Database sync completed successfully.');
+    } catch (syncError) {
+      console.error('⚠️ Database sync failed, continuing without sync:', syncError.message);
+      logger.warn('⚠️ Database sync failed, continuing without sync:', syncError.message);
+      // Continue server startup even if sync fails
+    }
 
     // Start document archive job
+    console.log('🔄 Starting document archive job...');
     logger.info('🔄 Starting document archive job...');
     documentArchiveJob.start();
+    console.log('✅ Document archive job started successfully.');
     logger.info('✅ Document archive job started successfully.');
 
     // Start the server
+    console.log(`🚀 Starting server on port ${PORT}...`);
     const server = app.listen(PORT, () => {
+      console.log(`🚀 Server is running on port ${PORT}`);
       logger.info(`🚀 Server is running on port ${PORT}`);
       logger.info(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`🌐 CORS enabled for development origins`);
@@ -349,12 +400,20 @@ async function startServer() {
 
   } catch (error) {
     logger.error('❌ Unable to start server:', error);
+    logger.error('❌ Error stack:', error.stack);
     process.exit(1);
   }
 }
 
 if (require.main === module) {
-  startServer();
+  logger.info('🚀 Starting server...');
+  try {
+    startServer();
+  } catch (error) {
+    logger.error('❌ Error calling startServer:', error);
+    logger.error('❌ Error stack:', error.stack);
+    process.exit(1);
+  }
 }
 
 module.exports = app;

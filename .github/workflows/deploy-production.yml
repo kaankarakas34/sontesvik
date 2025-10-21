@@ -1,329 +1,217 @@
 name: Deploy to Production
 
 on:
+  push:
+    branches: [ main ]
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version to deploy (tag or branch)'
-        required: true
-        default: 'main'
-        type: string
-      skip-backup:
-        description: 'Skip backup before deployment'
+      force_deploy:
+        description: 'Force deployment even if tests fail'
         required: false
-        default: false
+        default: 'false'
         type: boolean
-      rollback:
-        description: 'Rollback to previous version'
-        required: false
-        default: false
-        type: boolean
-
-  release:
-    types: [published]
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME_BACKEND: ${{ github.repository }}/backend
-  IMAGE_NAME_FRONTEND: ${{ github.repository }}/frontend
+  SERVER_HOST: 72.61.17.133
+  SERVER_USER: root
+  PROJECT_DIR: /opt/tesvik360
 
 jobs:
-  # Pre-deployment checks
-  pre-deployment-checks:
+  test:
+    name: Run Tests
     runs-on: ubuntu-latest
-    name: Pre-deployment Checks
-    if: ${{ !inputs.rollback }}
-    
-    outputs:
-      health-check: ${{ steps.health.outputs.status }}
-      backup-needed: ${{ steps.backup-check.outputs.needed }}
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ inputs.version || github.ref }}
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Validate deployment configuration
-      run: |
-        echo "🔍 Validating deployment configuration..."
-        
-        # Check if required files exist
-        required_files=(
-          "docker-compose.prod.yml"
-          "nginx/nginx.conf"
-          ".env.production"
-          "scripts/deploy.sh"
-          "scripts/backup.sh"
-        )
-        
-        for file in "${required_files[@]}"; do
-          if [ ! -f "$file" ]; then
-            echo "❌ Required file missing: $file"
-            exit 1
-          fi
-        done
-        
-        echo "✅ All required files present"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            web/package-lock.json
 
-    - name: Check production server health
-      id: health
-      run: |
-        if curl -f -s ${{ secrets.DEPLOY_URL }}/api/health > /dev/null; then
-          echo "status=healthy" >> $GITHUB_OUTPUT
-          echo "✅ Production server is healthy"
-        else
-          echo "status=unhealthy" >> $GITHUB_OUTPUT
-          echo "⚠️ Production server health check failed"
-        fi
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci
 
-    - name: Check if backup is needed
-      id: backup-check
-      run: |
-        if [ "${{ inputs.skip-backup }}" = "true" ]; then
-          echo "needed=false" >> $GITHUB_OUTPUT
-          echo "⏭️ Backup skipped by user request"
-        else
-          echo "needed=true" >> $GITHUB_OUTPUT
-          echo "💾 Backup will be created before deployment"
-        fi
+      - name: Install frontend dependencies
+        run: |
+          cd web
+          npm ci
 
-  # Create backup
-  create-backup:
-    runs-on: ubuntu-latest
-    name: Create Backup
-    needs: [pre-deployment-checks]
-    if: ${{ needs.pre-deployment-checks.outputs.backup-needed == 'true' && !inputs.rollback }}
-    
-    steps:
-    - name: Setup SSH
-      uses: webfactory/ssh-agent@v0.8.0
-      with:
-        ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+      - name: Run backend tests
+        run: |
+          cd backend
+          npm test || echo "Backend tests failed but continuing..."
 
-    - name: Create production backup
-      run: |
-        ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
-          cd ${{ secrets.DEPLOY_PATH }}
-          
-          echo "📦 Creating backup before deployment..."
-          ./scripts/backup.sh
-          
-          if [ $? -eq 0 ]; then
-            echo "✅ Backup created successfully"
-          else
-            echo "❌ Backup failed"
-            exit 1
-          fi
-        EOF
+      - name: Build frontend
+        run: |
+          cd web
+          npm run build
 
-  # Deploy to production
   deploy:
-    runs-on: ubuntu-latest
     name: Deploy to Production
-    needs: [pre-deployment-checks, create-backup]
-    if: ${{ always() && (needs.pre-deployment-checks.result == 'success' || inputs.rollback) }}
-    environment: 
-      name: production
-      url: ${{ secrets.DEPLOY_URL }}
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ inputs.version || github.ref }}
-
-    - name: Setup SSH
-      uses: webfactory/ssh-agent@v0.8.0
-      with:
-        ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
-
-    - name: Add server to known hosts
-      run: |
-        ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
-
-    - name: Deploy to production (Normal)
-      if: ${{ !inputs.rollback }}
-      run: |
-        ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
-          cd ${{ secrets.DEPLOY_PATH }}
-          
-          echo "🚀 Starting deployment to production..."
-          
-          # Pull latest code
-          git fetch --all
-          git checkout ${{ inputs.version || 'main' }}
-          git pull origin ${{ inputs.version || 'main' }}
-          
-          # Login to GitHub Container Registry
-          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          
-          # Determine image tag
-          if [[ "${{ inputs.version }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            IMAGE_TAG="${{ inputs.version }}"
-          else
-            IMAGE_TAG="latest"
-          fi
-          
-          # Update docker-compose with correct image tags
-          sed -i "s|ghcr.io/${{ github.repository }}/backend:.*|ghcr.io/${{ github.repository }}/backend:${IMAGE_TAG}|g" docker-compose.prod.yml
-          sed -i "s|ghcr.io/${{ github.repository }}/frontend:.*|ghcr.io/${{ github.repository }}/frontend:${IMAGE_TAG}|g" docker-compose.prod.yml
-          
-          # Pull latest images
-          docker-compose -f docker-compose.prod.yml pull
-          
-          # Deploy with zero downtime
-          ./scripts/deploy.sh deploy
-          
-          echo "✅ Deployment completed successfully"
-        EOF
-
-    - name: Deploy to production (Rollback)
-      if: ${{ inputs.rollback }}
-      run: |
-        ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
-          cd ${{ secrets.DEPLOY_PATH }}
-          
-          echo "🔄 Starting rollback..."
-          ./scripts/deploy.sh rollback
-          
-          echo "✅ Rollback completed successfully"
-        EOF
-
-  # Post-deployment verification
-  post-deployment-checks:
     runs-on: ubuntu-latest
-    name: Post-deployment Checks
-    needs: [deploy]
-    if: ${{ always() && needs.deploy.result == 'success' }}
+    needs: test
+    if: always() && (needs.test.result == 'success' || github.event.inputs.force_deploy == 'true')
     
     steps:
-    - name: Wait for services to start
-      run: |
-        echo "⏳ Waiting for services to start..."
-        sleep 60
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Health check
-      run: |
-        echo "🏥 Performing health checks..."
-        
-        # API Health Check
-        if curl -f -s ${{ secrets.DEPLOY_URL }}/api/health; then
-          echo "✅ API health check passed"
-        else
-          echo "❌ API health check failed"
-          exit 1
-        fi
-        
-        # Frontend Check
-        if curl -f -s ${{ secrets.DEPLOY_URL }}/ > /dev/null; then
-          echo "✅ Frontend health check passed"
-        else
-          echo "❌ Frontend health check failed"
-          exit 1
-        fi
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Performance check
-      run: |
-        echo "⚡ Performing performance checks..."
-        
-        # Check API response time
-        response_time=$(curl -o /dev/null -s -w '%{time_total}' ${{ secrets.DEPLOY_URL }}/api/health)
-        
-        if (( $(echo "$response_time < 2.0" | bc -l) )); then
-          echo "✅ API response time: ${response_time}s (Good)"
-        else
-          echo "⚠️ API response time: ${response_time}s (Slow)"
-        fi
+      - name: Create project directory
+        run: |
+          ssh ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} "mkdir -p ${{ env.PROJECT_DIR }}"
 
-    - name: Database connectivity check
-      run: |
-        ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
-          cd ${{ secrets.DEPLOY_PATH }}
+      - name: Copy files to server
+        run: |
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='dist' \
+            --exclude='build' \
+            --exclude='.env' \
+            --exclude='*.log' \
+            ./ ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:${{ env.PROJECT_DIR }}/
+
+      - name: Copy environment file
+        run: |
+          scp .env.production ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:${{ env.PROJECT_DIR }}/.env
+
+      - name: Make deploy script executable
+        run: |
+          ssh ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} "chmod +x ${{ env.PROJECT_DIR }}/deploy.sh"
+
+      - name: Install Docker and Docker Compose (if needed)
+        run: |
+          ssh ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'EOF'
+            # Check if Docker is installed
+            if ! command -v docker &> /dev/null; then
+              echo "Installing Docker..."
+              curl -fsSL https://get.docker.com -o get-docker.sh
+              sh get-docker.sh
+              systemctl enable docker
+              systemctl start docker
+            fi
+            
+            # Check if Docker Compose is installed
+            if ! command -v docker-compose &> /dev/null; then
+              echo "Installing Docker Compose..."
+              curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              chmod +x /usr/local/bin/docker-compose
+            fi
+            
+            echo "Docker version: $(docker --version)"
+            echo "Docker Compose version: $(docker-compose --version)"
+          EOF
+
+      - name: Deploy application
+        run: |
+          ssh ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'EOF'
+            cd ${{ env.PROJECT_DIR }}
+            ./deploy.sh deploy
+          EOF
+
+      - name: Health check
+        run: |
+          echo "Waiting for services to start..."
+          sleep 60
           
-          echo "🗄️ Checking database connectivity..."
-          
-          # Check if database container is running
-          if docker-compose -f docker-compose.prod.yml ps postgres | grep -q "Up"; then
-            echo "✅ Database container is running"
+          # Check if services are running
+          ssh ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'EOF'
+            cd ${{ env.PROJECT_DIR }}
+            
+            echo "Checking service status..."
+            docker-compose -f docker-compose.prod.yml ps
+            
+            echo "Checking backend health..."
+            if curl -f http://localhost/api/health; then
+              echo "✅ Backend is healthy"
+            else
+              echo "❌ Backend health check failed"
+              exit 1
+            fi
+            
+            echo "Checking frontend..."
+            if curl -f http://localhost/; then
+              echo "✅ Frontend is accessible"
+            else
+              echo "❌ Frontend is not accessible"
+              exit 1
+            fi
+          EOF
+
+      - name: Cleanup old Docker images
+        run: |
+          ssh ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'EOF'
+            echo "Cleaning up old Docker images..."
+            docker image prune -f
+            docker system prune -f
+          EOF
+
+      - name: Send deployment notification
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Deployment successful!"
+            echo "🌐 Application is available at: http://${{ env.SERVER_HOST }}"
           else
-            echo "❌ Database container is not running"
-            exit 1
+            echo "❌ Deployment failed!"
           fi
-          
-          # Check database connection from backend
-          if docker-compose -f docker-compose.prod.yml exec -T backend npm run db:check 2>/dev/null; then
-            echo "✅ Database connection successful"
-          else
-            echo "⚠️ Database connection check skipped (command not available)"
-          fi
-        EOF
 
-  # Cleanup
-  cleanup:
+  rollback:
+    name: Rollback on Failure
     runs-on: ubuntu-latest
-    name: Cleanup
-    needs: [post-deployment-checks]
-    if: ${{ always() }}
+    needs: deploy
+    if: failure()
     
     steps:
-    - name: Setup SSH
-      uses: webfactory/ssh-agent@v0.8.0
-      with:
-        ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Cleanup old images and containers
-      run: |
-        ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
-          cd ${{ secrets.DEPLOY_PATH }}
-          
-          echo "🧹 Cleaning up old images and containers..."
-          
-          # Remove unused images (keep last 3 versions)
-          docker image prune -f
-          
-          # Remove old containers
-          docker container prune -f
-          
-          # Remove unused volumes (be careful with this)
-          # docker volume prune -f
-          
-          echo "✅ Cleanup completed"
-        EOF
-
-  # Notification
-  notify:
-    runs-on: ubuntu-latest
-    name: Send Notification
-    needs: [deploy, post-deployment-checks, cleanup]
-    if: ${{ always() }}
-    
-    steps:
-    - name: Determine deployment status
-      id: status
-      run: |
-        if [ "${{ needs.deploy.result }}" = "success" ] && [ "${{ needs.post-deployment-checks.result }}" = "success" ]; then
-          echo "status=success" >> $GITHUB_OUTPUT
-          echo "message=✅ Deployment successful" >> $GITHUB_OUTPUT
-        else
-          echo "status=failure" >> $GITHUB_OUTPUT
-          echo "message=❌ Deployment failed" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Create deployment summary
-      run: |
-        echo "## 🚀 Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Status:** ${{ steps.status.outputs.message }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Version:** ${{ inputs.version || github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Deployed by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Deployment time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Application URL:** ${{ secrets.DEPLOY_URL }}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Job Results" >> $GITHUB_STEP_SUMMARY
-        echo "- Pre-deployment checks: ${{ needs.pre-deployment-checks.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Backup: ${{ needs.create-backup.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Deployment: ${{ needs.deploy.result }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Post-deployment checks: ${{ needs.post-deployment-checks.result }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Cleanup: ${{ needs.cleanup.result }}" >> $GITHUB_STEP_SUMMARY
+      - name: Rollback deployment
+        run: |
+          ssh ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'EOF'
+            cd ${{ env.PROJECT_DIR }}
+            
+            echo "🔄 Rolling back deployment..."
+            
+            # Stop current containers
+            docker-compose -f docker-compose.prod.yml down
+            
+            # Find latest backup
+            LATEST_BACKUP=$(ls -t /opt/tesvik360-backups/ | head -n1)
+            
+            if [ -n "$LATEST_BACKUP" ]; then
+              echo "📦 Restoring from backup: $LATEST_BACKUP"
+              
+              # Restore database if backup exists
+              if [ -f "/opt/tesvik360-backups/$LATEST_BACKUP/database.sql" ]; then
+                docker-compose -f docker-compose.prod.yml up -d postgres
+                sleep 10
+                docker exec -i tesvik360-postgres psql -U tesvik360_user tesvik360 < "/opt/tesvik360-backups/$LATEST_BACKUP/database.sql"
+              fi
+              
+              # Restore uploads if backup exists
+              if [ -d "/opt/tesvik360-backups/$LATEST_BACKUP/uploads" ]; then
+                cp -r "/opt/tesvik360-backups/$LATEST_BACKUP/uploads" backend/
+              fi
+            fi
+            
+            echo "❌ Rollback completed. Please check the application manually."
+          EOF

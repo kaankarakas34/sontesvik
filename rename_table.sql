@@ -1,0 +1,1 @@
+ALTER TABLE "Incentives" RENAME TO incentives;

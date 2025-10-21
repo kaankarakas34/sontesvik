@@ -4,23 +4,32 @@ const { config } = require('../config/database');
 const env = process.env.NODE_ENV || 'development';
 const dbConfig = config[env];
 
+console.log('🗄️ Loading models...');
 // Initialize Sequelize
-const sequelize = new Sequelize(
-  dbConfig.database,
-  dbConfig.username,
-  dbConfig.password,
-  {
-    host: dbConfig.host,
-    port: dbConfig.port,
-    dialect: dbConfig.dialect,
-    logging: dbConfig.logging,
-    pool: dbConfig.pool,
-    dialectOptions: dbConfig.dialectOptions,
-    define: {
-      underscored: true
+let sequelize;
+try {
+  sequelize = new Sequelize(
+    dbConfig.database,
+    dbConfig.username,
+    dbConfig.password,
+    {
+      host: dbConfig.host,
+      port: dbConfig.port,
+      dialect: dbConfig.dialect,
+      logging: dbConfig.logging,
+      pool: dbConfig.pool,
+      dialectOptions: dbConfig.dialectOptions,
+      define: {
+        underscored: true
+      }
     }
-  }
-);
+  );
+  console.log('✅ Models loaded successfully');
+} catch (error) {
+  console.error('❌ Error loading models:', error.message);
+  console.error('Stack:', error.stack);
+  process.exit(1);
+}
 
 // Import models
 const User = require('./User')(sequelize);
@@ -33,7 +42,7 @@ const Application = require('./Application')(sequelize);
 const Document = require('./Document')(sequelize);
 const IncentiveDocument = require('./IncentiveDocument')(sequelize);
 const Notification = require('./Notification')(sequelize);
-const Ticket = require('./Ticket')(sequelize);
+const Ticket = require('./ticket')(sequelize);
 const TicketMessage = require('./TicketMessage')(sequelize);
 const IncentiveGuide = require('./IncentiveGuide')(sequelize);
 const DocumentIncentiveMapping = require('./DocumentIncentiveMapping')(sequelize);

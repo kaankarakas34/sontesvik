@@ -153,7 +153,7 @@ module.exports = (sequelize) => {
     timestamps: true,
     paranoid: true,
     underscored: true,
-    tableName: 'Incentives',
+    tableName: 'incentives',
     indexes: [
       {
         fields: ['status']
