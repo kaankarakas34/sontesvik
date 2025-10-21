@@ -2,7 +2,7 @@
 export const API_CONFIG = {
   // Base URL - Environment variable ile yönetiliyor
   // Development'da Vite proxy kullanıyoruz, production'da direkt backend URL
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : 'http://127.0.0.1:5002/api'),
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : 'http://72.61.17.133/api'),
   
   // Timeout settings
   TIMEOUT: 30000, // 30 seconds
