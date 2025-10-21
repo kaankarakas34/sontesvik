@@ -196,7 +196,9 @@ const corsOptions = {
       'http://127.0.0.1:3000',
       'http://127.0.0.1:3001',
       'http://127.0.0.1:5173',
-      'http://127.0.0.1:5174'
+      'http://127.0.0.1:5174',
+      'http://72.61.17.133',
+      'http://72.61.17.133:80'
     ];
     
     if (!origin || allowedOrigins.includes(origin)) {
