@@ -1,4 +1,5 @@
 import { jwtDecode } from 'jwt-decode';
+import { API_CONFIG } from '../config/api.config';
 
 interface JWTPayload {
   id: string;
@@ -61,7 +62,7 @@ export const checkTokenExpiry = (token: string, bufferMinutes: number = 5) => {
 export const refreshAccessToken = async (refreshToken: string): Promise<string | null> => {
   console.log('Attempting to refresh access token...');
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5002/api'}/auth/refresh-token`, {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/auth/refresh-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

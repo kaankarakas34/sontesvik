@@ -91,9 +91,11 @@ const register = async (req, res, next) => {
 // @access  Public
 const login = async (req, res, next) => {
   try {
-    console.log('🔍 Debug - Login request received');
-    console.log('🔍 Debug - Request body:', req.body);
-    console.log('🔍 Debug - Request headers:', req.headers);
+    logger.info('🔍 Debug - Login request received', {
+      email: req.body?.email,
+      ip: req.ip || req.connection.remoteAddress,
+      timestamp: new Date().toISOString()
+    });
     
     const { email, password } = req.body;
 
@@ -126,13 +128,20 @@ const login = async (req, res, next) => {
     }
 
     // Check password
-    console.log('🔍 Debug - Email:', email);
-    console.log('🔍 Debug - Password from request:', password);
-    console.log('🔍 Debug - User found:', !!user);
-    console.log('🔍 Debug - User password hash:', user.password ? user.password.substring(0, 20) + '...' : 'No password');
+    logger.info('🔍 Debug - Checking password', {
+      email: email,
+      userFound: !!user,
+      userStatus: user.status,
+      userRole: user.role,
+      timestamp: new Date().toISOString()
+    });
     
     const isPasswordValid = await user.comparePassword(password);
-    console.log('🔍 Debug - Password valid:', isPasswordValid);
+    logger.info('🔍 Debug - Password validation result', {
+      email: email,
+      isPasswordValid: isPasswordValid,
+      timestamp: new Date().toISOString()
+    });
     
     if (!isPasswordValid) {
       await user.incLoginAttempts();
@@ -143,6 +152,12 @@ const login = async (req, res, next) => {
     }
 
     // Check if user is active
+    logger.info('🔍 Debug - Checking user status', {
+      email: email,
+      userStatus: user.status,
+      timestamp: new Date().toISOString()
+    });
+    
     if (user.status !== 'active') {
       let message;
       switch (user.status) {
@@ -164,37 +179,141 @@ const login = async (req, res, next) => {
       });
     }
 
+    logger.info('🔍 Debug - User is active, proceeding with login', {
+      email: email,
+      timestamp: new Date().toISOString()
+    });
+
     // Reset login attempts on successful login
-    await user.resetLoginAttempts();
+    try {
+      await user.resetLoginAttempts();
+      logger.info('🔍 Debug - Login attempts reset successfully', {
+        email: email,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('🔍 Debug - Error resetting login attempts', {
+        email: email,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
 
     // Update last login
-    await user.update({ lastLoginAt: new Date() });
+    try {
+      await user.update({ lastLoginAt: new Date() });
+      logger.info('🔍 Debug - Last login updated successfully', {
+        email: email,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('🔍 Debug - Error updating last login', {
+        email: email,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
 
     // Generate tokens
-    const accessToken = user.generateAccessToken();
-    const refreshToken = user.generateRefreshToken();
+    try {
+      logger.info('🔍 Debug - Generating access token', {
+        email: email,
+        timestamp: new Date().toISOString()
+      });
+      const accessToken = user.generateAccessToken();
+      logger.info('🔍 Debug - Access token generated successfully', {
+        email: email,
+        timestamp: new Date().toISOString()
+      });
+      
+      logger.info('🔍 Debug - Generating refresh token', {
+        email: email,
+        timestamp: new Date().toISOString()
+      });
+      const refreshToken = user.generateRefreshToken();
+      logger.info('🔍 Debug - Refresh token generated successfully', {
+        email: email,
+        timestamp: new Date().toISOString()
+      });
 
-    // Save refresh token
-    await user.update({ refreshToken });
+      // Save refresh token
+      logger.info('🔍 Debug - Saving refresh token', {
+        email: email,
+        timestamp: new Date().toISOString()
+      });
+      await user.update({ refreshToken });
+      logger.info('🔍 Debug - Refresh token saved successfully', {
+        email: email,
+        timestamp: new Date().toISOString()
+      });
 
-    // Set refresh token as httpOnly cookie
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+      // Set refresh token as httpOnly cookie
+      logger.info('🔍 Debug - Setting cookie', {
+        email: email,
+        timestamp: new Date().toISOString()
+      });
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+      logger.info('🔍 Debug - Cookie set successfully', {
+        email: email,
+        timestamp: new Date().toISOString()
+      });
 
-    // Respond with unified payload expected by frontend/mobile clients
-    res.json({
-      success: true,
-      message: 'Login successful',
-      user: user.toJSON(),
-      token: accessToken,
-      refreshToken,
-      expiresIn: process.env.JWT_EXPIRE || '48h'
-    });
+      // Respond with unified payload expected by frontend/mobile clients
+      logger.info('🔍 Debug - Sending response', {
+        email: email,
+        timestamp: new Date().toISOString()
+      });
+      res.json({
+        success: true,
+        message: 'Login successful',
+        user: user.toJSON(),
+        token: accessToken,
+        refreshToken,
+        expiresIn: process.env.JWT_EXPIRE || '48h'
+      });
+      logger.info('🔍 Debug - Response sent successfully', {
+        email: email,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('🔍 Debug - Error in token generation/saving', {
+        email: email,
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
   } catch (error) {
+    logger.error('🔍 Login error caught', {
+      email: email,
+      error: error.message,
+      stack: error.stack,
+      errorName: error.name,
+      errorCode: error.code,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Send detailed error response in development
+    if (process.env.NODE_ENV !== 'production') {
+      return res.status(500).json({
+        success: false,
+        error: {
+          message: 'Internal server error',
+          details: error.message,
+          stack: error.stack,
+          name: error.name
+        }
+      });
+    }
+    
     next(error);
   }
 };

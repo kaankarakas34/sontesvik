@@ -59,7 +59,7 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password_123}
       JWT_SECRET: ${JWT_SECRET:-your_super_secret_jwt_key_here}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your_super_secret_refresh_key_here}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+      CORS_ORIGIN: "*"
       EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
       EMAIL_PORT: ${EMAIL_PORT:-587}
       EMAIL_USER: ${EMAIL_USER:-your_email@gmail.com}
@@ -92,6 +92,11 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:80/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   # Nginx Reverse Proxy
   nginx:

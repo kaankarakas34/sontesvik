@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5002/api';
+import { API_CONFIG } from '../config/api.config';
 
 export interface ApplicationRoom {
   id: string;
@@ -123,7 +122,7 @@ class ApplicationRoomService {
     priority?: string;
   }) {
     try {
-      const response = await axios.get(`${API_BASE_URL}/application-rooms`, {
+      const response = await axios.get(`${API_CONFIG.BASE_URL}/application-rooms`, {
         headers: this.getAuthHeaders(),
         params
       });
@@ -135,7 +134,7 @@ class ApplicationRoomService {
 
   async getRoomById(roomId: string) {
     try {
-      const response = await axios.get(`${API_BASE_URL}/application-rooms/${roomId}`, {
+      const response = await axios.get(`${API_CONFIG.BASE_URL}/application-rooms/${roomId}`, {
         headers: this.getAuthHeaders()
       });
       return response.data;
@@ -146,7 +145,7 @@ class ApplicationRoomService {
 
   async getRoomByApplicationId(applicationId: string) {
     try {
-      const response = await axios.get(`${API_BASE_URL}/application-rooms/by-application/${applicationId}`, {
+      const response = await axios.get(`${API_CONFIG.BASE_URL}/application-rooms/by-application/${applicationId}`, {
         headers: this.getAuthHeaders()
       });
       return response.data;
@@ -158,7 +157,7 @@ class ApplicationRoomService {
   async updateRoomStatus(roomId: string, status: string) {
     try {
       const response = await axios.patch(
-        `${API_BASE_URL}/application-rooms/${roomId}/status`,
+        `${API_CONFIG.BASE_URL}/application-rooms/${roomId}/status`,
         { status },
         { headers: this.getAuthHeaders() }
       );
@@ -171,7 +170,7 @@ class ApplicationRoomService {
   async updateRoomPriority(roomId: string, priority: string) {
     try {
       const response = await axios.patch(
-        `${API_BASE_URL}/application-rooms/${roomId}/priority`,
+        `${API_CONFIG.BASE_URL}/application-rooms/${roomId}/priority`,
         { priority },
         { headers: this.getAuthHeaders() }
       );
@@ -184,7 +183,7 @@ class ApplicationRoomService {
   async addConsultantNote(roomId: string, note: string) {
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/application-rooms/${roomId}/notes`,
+        `${API_CONFIG.BASE_URL}/application-rooms/${roomId}/notes`,
         { note },
         { headers: this.getAuthHeaders() }
       );
@@ -200,7 +199,7 @@ class ApplicationRoomService {
     limit?: number;
   }) {
     try {
-      const response = await axios.get(`${API_BASE_URL}/application-rooms/${roomId}/messages`, {
+      const response = await axios.get(`${API_CONFIG.BASE_URL}/application-rooms/${roomId}/messages`, {
         headers: this.getAuthHeaders(),
         params
       });
@@ -218,7 +217,7 @@ class ApplicationRoomService {
   }) {
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/application-rooms/${roomId}/messages`,
+        `${API_CONFIG.BASE_URL}/application-rooms/${roomId}/messages`,
         messageData,
         { headers: this.getAuthHeaders() }
       );
@@ -235,7 +234,7 @@ class ApplicationRoomService {
     documentType?: string;
   }) {
     try {
-      const response = await axios.get(`${API_BASE_URL}/application-rooms/${roomId}/documents`, {
+      const response = await axios.get(`${API_CONFIG.BASE_URL}/application-rooms/${roomId}/documents`, {
         headers: this.getAuthHeaders(),
         params
       });
@@ -265,7 +264,7 @@ class ApplicationRoomService {
       }
 
       const response = await axios.post(
-        `${API_BASE_URL}/application-rooms/${roomId}/documents`,
+        `${API_CONFIG.BASE_URL}/application-rooms/${roomId}/documents`,
         formData,
         { headers: this.getMultipartHeaders() }
       );
@@ -278,7 +277,7 @@ class ApplicationRoomService {
   async downloadDocument(documentId: string) {
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/documents/${documentId}/download`,
+        `${API_CONFIG.BASE_URL}/documents/${documentId}/download`,
         {
           headers: this.getAuthHeaders(),
           responseType: 'blob'
