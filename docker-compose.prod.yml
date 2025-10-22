@@ -57,13 +57,13 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password_123}
-      JWT_SECRET: ${JWT_SECRET:-your_super_secret_jwt_key_here}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your_super_secret_refresh_key_here}
+      JWT_SECRET: ${JWT_SECRET:jwt_password_123}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:jwt_refresh_password_123}
       CORS_ORIGIN: "*"
-      EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
+      EMAIL_HOST: ${EMAIL_HOST:-mail.kurumsalaposta.com}
       EMAIL_PORT: ${EMAIL_PORT:-587}
-      EMAIL_USER: ${EMAIL_USER:-your_email@gmail.com}
-      EMAIL_PASS: ${EMAIL_PASS:-your_app_password}
+      EMAIL_USER: ${EMAIL_USER:-info@tesvik360.com}
+      EMAIL_PASS: ${EMAIL_PASS:-xk=7-Y.Y792-LrMk}
       UPLOAD_PATH: /app/uploads
     volumes:
       - backend_uploads:/app/uploads

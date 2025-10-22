@@ -20,10 +20,18 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3001,
-    host: '0.0.0.0',
-    open: false,
-    strictPort: true,
+    port: 5173,
+    host: 'localhost',
+    open: true,
+    strictPort: false,
+    cors: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5002',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   build: {
     outDir: 'dist',
