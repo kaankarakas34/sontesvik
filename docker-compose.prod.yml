@@ -59,7 +59,11 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password_123}
       JWT_SECRET: ${JWT_SECRET:jwt_password_123}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:jwt_refresh_password_123}
-      CORS_ORIGIN: "*"
+      CORS_ORIGIN: "https://app.tesvik360.com"
+      FRONTEND_URL: "https://app.tesvik360.com"
+      FORCE_HTTPS: "true"
+      SECURE_COOKIES: "true"
+      TRUST_PROXY: "true"
       EMAIL_HOST: ${EMAIL_HOST:-mail.kurumsalaposta.com}
       EMAIL_PORT: ${EMAIL_PORT:-587}
       EMAIL_USER: ${EMAIL_USER:-info@tesvik360.com}
