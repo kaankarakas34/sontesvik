@@ -9,6 +9,9 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
+console.log('⚙️ Loading Coolify configuration...');
+const coolifyConfig = require('./config/coolify');
+
 console.log('📝 Setting up logger...');
 // Logger'ı erken yükle
 const logger = require('./utils/logger');
@@ -136,8 +139,12 @@ function createRateLimiter(windowMs, max, message) {
   });
 }
 
+// Coolify yapılandırmasından rate limiting ayarlarını al
+const rateLimitConfig = coolifyConfig.getRateLimitConfig();
+console.log('⚡ Rate limit configuration:', rateLimitConfig);
+
 // Rate limiters
-const generalLimiter = createRateLimiter(15 * 60 * 1000, 100, 'Too many requests, please try again later.');
+const generalLimiter = createRateLimiter(rateLimitConfig.windowMs, rateLimitConfig.max, rateLimitConfig.message.error);
 const apiLimiter = createRateLimiter(1 * 60 * 1000, 60, 'API rate limit exceeded, please try again later.');
 
 // Auth-specific rate limiter (more restrictive)
@@ -185,14 +192,9 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// CORS configuration - Allow all origins
-const corsOptions = {
-  origin: true, // Allow all origins
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept'],
-  optionsSuccessStatus: 200 // For pre-flight requests
-};
+// Coolify yapılandırmasından CORS ayarlarını al
+const corsOptions = coolifyConfig.getCorsConfig();
+console.log('🌐 CORS configuration:', corsOptions);
 
 app.use(cors(corsOptions));
 
@@ -360,8 +362,22 @@ async function startServer() {
       console.log(`🚀 Server is running on port ${PORT}`);
       logger.info(`🚀 Server is running on port ${PORT}`);
       logger.info(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
-      logger.info(`🌐 CORS enabled for development origins`);
+      
+      // Coolify deployment bilgilerini logla
+      const deploymentInfo = coolifyConfig.getDeploymentInfo();
+      const urls = coolifyConfig.getCoolifyUrls();
+      
+      console.log('🌐 Coolify Deployment Info:');
+      console.log(`   FQDN: ${deploymentInfo.fqdn || 'Not set'}`);
+      console.log(`   Frontend URL: ${urls.frontendUrl}`);
+      console.log(`   API URL: ${urls.apiUrl}`);
+      console.log(`   CORS Origin: ${urls.corsOrigin}`);
+      console.log(`   Deployment ID: ${deploymentInfo.deploymentId || 'Not set'}`);
+      console.log(`   Branch: ${deploymentInfo.branch}`);
+      
+      logger.info(`🌐 CORS enabled for origins: ${JSON.stringify(corsOptions.origin)}`);
       logger.info(`🔒 Rate limiting: ${RATE_LIMIT_DISABLED ? 'DISABLED' : 'ENABLED'}`);
+      logger.info(`🚀 Coolify FQDN: ${deploymentInfo.fqdn || 'Not configured'}`);
     });
 
     // Graceful shutdown

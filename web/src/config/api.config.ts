@@ -1,8 +1,32 @@
-// API Configuration
+// API Configuration - Coolify FQDN ile dinamik yapılandırma
+const getBaseUrl = (): string => {
+  // Vite build time'da tanımlanan global değişkenler
+  if (typeof __API_URL__ !== 'undefined') {
+    return __API_URL__
+  }
+  
+  // Environment variable'dan al
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL
+  }
+  
+  // Coolify FQDN'den dinamik oluştur
+  if (typeof __COOLIFY_FQDN__ !== 'undefined' && __COOLIFY_FQDN__) {
+    return `${__COOLIFY_FQDN__}/api`
+  }
+  
+  // Production'da varsayılan URL
+  if (import.meta.env.PROD) {
+    return 'https://app.tesvik360.com/api'
+  }
+  
+  // Development'ta localhost
+  return '/api'
+}
+
 export const API_CONFIG = {
-  // Base URL - Environment variable ile yönetiliyor
-  // Her ortamda göreceli yol kullanıyoruz, böylece hangi domain'de olursa olsun çalışır
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || '/api',
+  // Base URL - Coolify FQDN ile dinamik olarak ayarlanır
+  BASE_URL: getBaseUrl(),
   
   // Timeout settings
   TIMEOUT: 30000, // 30 seconds
@@ -44,6 +68,12 @@ export const API_CONFIG = {
 // Environment check
 export const isDevelopment = import.meta.env.DEV
 export const isProduction = import.meta.env.PROD
+
+// Coolify deployment bilgileri
+export const DEPLOYMENT_INFO = {
+  COOLIFY_FQDN: typeof __COOLIFY_FQDN__ !== 'undefined' ? __COOLIFY_FQDN__ : '',
+  IS_COOLIFY_DEPLOYMENT: typeof __COOLIFY_FQDN__ !== 'undefined' && __COOLIFY_FQDN__ !== '',
+} as const
 
 // API Endpoints - Merkezi endpoint yönetimi
 export const API_ENDPOINTS = {

@@ -1,0 +1,203 @@
+# =====================================================
+# COOLIFY GIT DEPLOYMENT DOCKER COMPOSE CONFIGURATION
+# =====================================================
+# Bu dosya Coolify ile Git deployment için optimize edilmiştir
+# Coolify otomatik domain ve SSL yönetimi sağlar
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: tesvik360-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-tesvik360}
+      POSTGRES_USER: ${DB_USER:-tesvik360_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - tesvik360-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-tesvik360_user} -d ${DB_NAME:-tesvik360}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: tesvik360-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - tesvik360-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
+    container_name: tesvik360-backend
+    restart: unless-stopped
+    # Coolify proxy için internal port
+    expose:
+      - "5000"
+    environment:
+      # Node.js Environment
+      NODE_ENV: production
+      PORT: 5000
+      
+      # Database Configuration
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-tesvik360}
+      DB_USER: ${DB_USER:-tesvik360_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+      
+      # Redis Configuration
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      
+      # JWT Configuration
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_EXPIRE: ${JWT_EXPIRE:-48h}
+      JWT_REFRESH_EXPIRE: ${JWT_REFRESH_EXPIRE:-7d}
+      
+      # Coolify Deployment Configuration
+      COOLIFY_FQDN: ${COOLIFY_FQDN}
+      COOLIFY_DEPLOYMENT_ID: ${COOLIFY_DEPLOYMENT_ID}
+      COOLIFY_PROJECT_ID: ${COOLIFY_PROJECT_ID}
+      COOLIFY_SERVICE_ID: ${COOLIFY_SERVICE_ID}
+      COOLIFY_BRANCH: ${COOLIFY_BRANCH:-main}
+      COOLIFY_COMMIT: ${COOLIFY_COMMIT}
+      COOLIFY_DEPLOYED_AT: ${COOLIFY_DEPLOYED_AT}
+      
+      # URL Configuration (Coolify otomatik ayarlar)
+      CORS_ORIGIN: ${COOLIFY_FQDN}
+      FRONTEND_URL: ${COOLIFY_FQDN}
+      API_URL: ${COOLIFY_FQDN}/api
+      APP_URL: ${COOLIFY_FQDN}
+      
+      # Security Configuration
+      FORCE_HTTPS: "true"
+      SECURE_COOKIES: "true"
+      TRUST_PROXY: "true"
+      SSL_ENABLED: "true"
+      
+      # Email Configuration
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASS: ${EMAIL_PASS}
+      EMAIL_FROM: ${EMAIL_FROM}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Teşvik360}
+      
+      # File Upload Configuration
+      UPLOAD_PATH: /app/uploads
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE:-10485760}
+      ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES:-pdf,doc,docx,jpg,jpeg,png}
+      
+      # Rate Limiting Configuration
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
+      
+      # Logging Configuration
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      
+    volumes:
+      - backend_uploads:/app/uploads
+    networks:
+      - tesvik360-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    labels:
+      # Coolify labels for service discovery
+      - "coolify.managed=true"
+      - "coolify.type=application"
+      - "coolify.name=tesvik360-backend"
+
+  # Frontend Web App
+  frontend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
+        VITE_API_BASE_URL: ${COOLIFY_FQDN}/api
+        VITE_APP_NAME: "Teşvik360"
+        VITE_NODE_ENV: production
+    container_name: tesvik360-frontend
+    restart: unless-stopped
+    # Coolify proxy için internal port
+    expose:
+      - "80"
+    environment:
+      # Coolify FQDN frontend'e aktarılır
+      COOLIFY_FQDN: ${COOLIFY_FQDN}
+    networks:
+      - tesvik360-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:80/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    labels:
+      # Coolify labels for service discovery
+      - "coolify.managed=true"
+      - "coolify.type=application"
+      - "coolify.name=tesvik360-frontend"
+      # Coolify routing configuration
+      - "coolify.http.routers.tesvik360-frontend.rule=Host(`${COOLIFY_FQDN}`)"
+      - "coolify.http.routers.tesvik360-frontend.tls=true"
+      - "coolify.http.routers.tesvik360-frontend.tls.certresolver=letsencrypt"
+
+volumes:
+  postgres_data:
+    driver: local
+    labels:
+      - "coolify.managed=true"
+  redis_data:
+    driver: local
+    labels:
+      - "coolify.managed=true"
+  backend_uploads:
+    driver: local
+    labels:
+      - "coolify.managed=true"
+
+networks:
+  tesvik360-network:
+    driver: bridge
+    labels:
+      - "coolify.managed=true"

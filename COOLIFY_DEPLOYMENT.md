@@ -1,147 +1,362 @@
-# Coolify Deployment Rehberi
+# Coolify Git Deployment Rehberi
 
-Bu rehber, Tesvik360 projesinin Coolify ile nasıl deploy edileceğini açıklar.
+Bu rehber, Tesvik360 projesinin Coolify ile Git üzerinden nasıl deploy edileceğini ve otomatik URL yapılandırmasını açıklar.
 
-## Önemli Değişiklikler
+## Coolify Otomatik Domain ve SSL Kurulumu
 
-Coolify deployment için aşağıdaki değişiklikler yapılmıştır:
+Coolify, Git deployment ile birlikte aşağıdaki özellikleri otomatik olarak sağlar:
 
-### 1. Frontend Değişiklikleri
+- **Otomatik Domain**: `COOLIFY_FQDN` environment variable ile otomatik domain yönetimi
+- **Otomatik SSL**: Let's Encrypt ile ücretsiz SSL sertifikaları
+- **Git Integration**: Repository değişikliklerinde otomatik deployment
+- **Environment Management**: Güvenli environment variable yönetimi
+- **HTTPS Redirect**: HTTP trafiğini otomatik HTTPS'e yönlendirme
+- **Sertifika Yenileme**: Otomatik sertifika yenileme
 
-- **Vite Config**: `vite.config.ts` dosyasında proxy ayarları kaldırıldı
-- **Environment Variables**: `.env` ve `.env.production` dosyalarında API URL'leri göreceli yollara (`/api`) çevrildi
-- **Host Ayarı**: Vite server host'u `0.0.0.0` olarak ayarlandı
+## Git Deployment için Yapılan Değişiklikler
 
-### 2. Backend Değişiklikleri
+### 1. Frontend Dinamik Yapılandırma
 
-- **CORS Ayarları**: `server.js` dosyasında CORS origin `true` olarak ayarlandı
-- **Host Ayarı**: Server listen fonksiyonu `0.0.0.0` host ile çalışacak şekilde güncellendi
-- **Environment Variables**: `.env` dosyasında `CORS_ORIGIN=*` eklendi
+#### Vite Config (`vite.config.ts`)
+- **Dinamik API URL**: `COOLIFY_FQDN` environment variable'ından otomatik API URL oluşturma
+- **Global Variables**: `__API_URL__` ve `__COOLIFY_FQDN__` build-time değişkenleri
+- **Environment Detection**: Development, production ve Coolify ortamları için otomatik yapılandırma
 
-### 3. Nginx Değişiklikleri
+#### API Config (`src/config/api.config.ts`)
+- **Dynamic Base URL**: Coolify FQDN'den otomatik base URL oluşturma
+- **Fallback URLs**: Ortam değişkenlerine göre fallback URL'ler
+- **Deployment Info**: Coolify deployment bilgilerini içeren yapılandırma
 
-- **Server Name**: `server_name _` olarak ayarlandı (herhangi bir domain kabul eder)
-- **SSL Support**: 443 portu için SSL desteği aktifleştirildi
-- **HTTPS Redirect**: HTTP trafiği HTTPS'e yönlendirilecek şekilde yapılandırıldı
+#### TypeScript Definitions (`vite-env.d.ts`)
+- **Global Types**: Coolify global değişkenleri için TypeScript tanımları
+- **Environment Types**: Genişletilmiş environment variable tipleri
 
-### 4. Docker Compose Değişiklikleri
+### 2. Backend Dinamik Yapılandırma
 
-- **CORS Origin**: Production compose dosyasında `CORS_ORIGIN: "*"` olarak ayarlandı
+#### Coolify Config (`src/config/coolify.js`)
+- **Dynamic URLs**: `COOLIFY_FQDN`'den otomatik URL oluşturma
+- **CORS Configuration**: Dinamik CORS ayarları
+- **SSL Configuration**: Otomatik SSL/TLS yapılandırması
+- **Rate Limiting**: Environment-based rate limiting
+- **Session Management**: Güvenli session yapılandırması
 
-## Coolify Deployment Adımları
+#### Server Configuration (`src/server.js`)
+- **Coolify Integration**: Coolify yapılandırmasının server'a entegrasyonu
+- **Dynamic CORS**: Otomatik CORS origin yönetimi
+- **Deployment Logging**: Coolify deployment bilgilerinin loglanması
 
-### 1. Proje Hazırlığı
+### 3. Docker Compose Optimizasyonu
+
+#### Coolify Docker Compose (`docker-compose.coolify.yml`)
+- **Coolify Labels**: Service discovery için Coolify etiketleri
+- **Environment Variables**: Coolify otomatik değişkenleri
+- **Health Checks**: Gelişmiş sağlık kontrolleri
+- **Volume Management**: Coolify-managed volume'lar
+- **Network Configuration**: Optimized network ayarları
+
+### 4. Environment Yapılandırması
+
+#### Coolify Environment (`.env.coolify`)
+- **Dynamic URLs**: `COOLIFY_FQDN` tabanlı URL yapılandırması
+- **Security Settings**: Production güvenlik ayarları
+- **Database Configuration**: Güvenli veritabanı yapılandırması
+- **Email Settings**: E-posta sunucu ayarları
+
+## Coolify Git Deployment Adımları
+
+### 1. Git Repository Hazırlığı
 
 ```bash
-# Projeyi git repository'sine push edin
+# Tüm değişiklikleri commit edin
 git add .
-git commit -m "Coolify deployment için yapılandırma güncellemeleri"
+git commit -m "Coolify Git deployment için dinamik yapılandırma"
 git push origin main
 ```
 
-### 2. Coolify'da Proje Oluşturma
+### 2. Coolify'da Git Application Oluşturma
 
 1. Coolify dashboard'una giriş yapın
-2. "New Resource" > "Application" seçin
-3. Git repository'nizi bağlayın
-4. Branch olarak `main` seçin
+2. **"New Resource"** > **"Application"** seçin
+3. **"Git Repository"** seçeneğini seçin
+4. Repository URL'nizi girin (GitHub, GitLab, Bitbucket)
+5. Branch olarak **`main`** seçin
+6. **"Docker Compose"** deployment type'ını seçin
+7. Docker Compose dosyası olarak **`docker-compose.coolify.yml`** belirtin
 
-### 3. Environment Variables Ayarlama
+### 3. Coolify Environment Variables
 
-Coolify'da aşağıdaki environment variables'ları ayarlayın:
+Coolify otomatik olarak aşağıdaki değişkenleri sağlar:
 
+#### Otomatik Coolify Variables
+```env
+# Coolify tarafından otomatik sağlanan
+COOLIFY_FQDN=your-app.coolify.domain
+COOLIFY_URL=https://your-app.coolify.domain
+COOLIFY_BRANCH=main
+COOLIFY_COMMIT_SHA=commit_hash
+COOLIFY_DEPLOYMENT_ID=deployment_id
+COOLIFY_PROJECT_ID=project_id
+COOLIFY_SERVICE_ID=service_id
+```
+
+#### Manuel Ayarlanması Gereken Variables
 ```env
 # Database
 DB_NAME=tesvik360
 DB_USER=tesvik360_user
 DB_PASSWORD=güçlü_şifre_buraya
-DB_HOST=postgres
-DB_PORT=5432
 
 # Redis
-REDIS_HOST=redis
-REDIS_PORT=6379
 REDIS_PASSWORD=redis_şifresi_buraya
 
-# JWT
+# JWT Secrets
 JWT_SECRET=çok_güçlü_jwt_secret_buraya
 JWT_REFRESH_SECRET=çok_güçlü_refresh_secret_buraya
 
-# CORS
-CORS_ORIGIN=*
-
-# Email
+# Email Configuration
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USER=email@domain.com
 EMAIL_PASS=email_şifresi
 
-# App
+# Application Settings
 NODE_ENV=production
-PORT=5000
+LOG_LEVEL=info
+BCRYPT_SALT_ROUNDS=12
 
-# Frontend
-VITE_API_BASE_URL=/api
-VITE_NODE_ENV=production
-VITE_APP_NAME=Tesvik360
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX=100
+RATE_LIMIT_DISABLED=false
+
+# File Upload
+MAX_FILE_SIZE=10485760
+UPLOAD_PATH=/app/uploads
 ```
 
-### 4. Docker Compose Ayarlama
+### 4. Git Deployment Yapılandırması
 
-Coolify'da Docker Compose deployment seçin ve `docker-compose.prod.yml` dosyasını kullanın.
+#### Build Settings
+- **Build Command**: Otomatik (Docker Compose)
+- **Start Command**: Otomatik (Docker Compose)
+- **Port**: 80 (Nginx proxy)
+- **Health Check**: `/api/health` endpoint
 
-### 5. SSL Sertifikası
+#### Git Integration
+- **Auto Deploy**: Branch push'larında otomatik deployment
+- **Build Logs**: Real-time build ve deployment logları
+- **Rollback**: Önceki deployment'lara geri dönüş
+- **Environment Branches**: Farklı branch'lar için farklı environment'lar
 
-Coolify otomatik olarak Let's Encrypt SSL sertifikası oluşturacaktır. Manuel SSL sertifikası kullanmak isterseniz:
+### 5. Otomatik Domain ve SSL Kurulumu
 
-1. Coolify dashboard'da SSL sekmesine gidin
-2. Sertifika dosyalarınızı yükleyin
-3. Nginx yapılandırmasını güncelleyin
+#### Domain Yapılandırması
+1. Coolify dashboard'da **"Domains"** sekmesine gidin
+2. Custom domain ekleyin (örn: `tesvik360.com`)
+3. DNS ayarlarınızda A kaydını Coolify IP'sine yönlendirin
+4. Coolify otomatik olarak domain'i yapılandıracak
 
-### 6. Domain Ayarlama
+#### SSL Sertifikası (Let's Encrypt)
+1. **"Generate SSL Certificate"** seçeneğini aktifleştirin
+2. Coolify otomatik olarak:
+   - Let's Encrypt sertifikası oluşturacak
+   - HTTP'yi HTTPS'e yönlendirecek
+   - Sertifikayı otomatik yenileyecek (90 günde bir)
+   - Security headers ekleyecek
 
-1. Coolify'da domain ayarlarına gidin
-2. Kendi domain'inizi ekleyin
-3. DNS ayarlarınızı Coolify'ın verdiği IP adresine yönlendirin
+#### Nginx Proxy (Otomatik)
+Coolify kendi Nginx proxy'sini kullanır:
+- **Load Balancing**: Otomatik yük dengeleme
+- **Health Checks**: Servis sağlık kontrolleri
+- **SSL Termination**: SSL sonlandırma
+- **Gzip Compression**: Otomatik sıkıştırma
+- **Security Headers**: Güvenlik başlıkları
+
+### 6. Git Deployment Monitoring
+
+#### Real-time Monitoring
+Coolify otomatik olarak sağlar:
+- **Build Logs**: Real-time build süreç logları
+- **Application Logs**: Container logları ve uygulama çıktıları
+- **Resource Usage**: CPU, RAM, disk kullanımı
+- **Health Checks**: Otomatik servis sağlık kontrolleri
+- **Deployment History**: Tüm deployment geçmişi
+
+#### Webhook Integration
+- **Git Webhooks**: Push'larda otomatik deployment
+- **Slack/Discord**: Deployment bildirimleri
+- **Email Alerts**: Hata durumlarında e-posta bildirimleri
+
+### 7. Environment Management
+
+#### Branch-based Environments
+```bash
+# Production (main branch)
+main → production.tesvik360.com
+
+# Staging (develop branch)  
+develop → staging.tesvik360.com
+
+# Feature branches
+feature/new-ui → feature-new-ui.tesvik360.com
+```
+
+#### Environment Variables per Branch
+Her branch için farklı environment variables:
+- **Production**: Canlı veritabanı ve ayarlar
+- **Staging**: Test veritabanı ve ayarlar
+- **Feature**: Development ayarları
+
+### 8. DNS Yapılandırması
+
+Domain sağlayıcınızda aşağıdaki DNS kayıtlarını ekleyin:
+
+```dns
+# Ana domain
+A    @              COOLIFY_SERVER_IP
+A    www            COOLIFY_SERVER_IP
+
+# Subdomain'ler (isteğe bağlı)
+A    app            COOLIFY_SERVER_IP
+A    api            COOLIFY_SERVER_IP
+A    staging        COOLIFY_SERVER_IP
+
+# CNAME (alternatif)
+CNAME tesvik360    your-coolify-domain.com
+```
+
+### 9. Rollback ve Versioning
+
+#### Otomatik Rollback
+```bash
+# Coolify dashboard'dan
+1. "Deployments" sekmesine gidin
+2. Önceki başarılı deployment'ı seçin
+3. "Rollback" butonuna tıklayın
+```
+
+#### Git-based Rollback
+```bash
+# Git üzerinden rollback
+git revert HEAD
+git push origin main
+# Coolify otomatik olarak yeni deployment başlatacak
+```
 
 ## Sorun Giderme
 
-### API Adresleri Localhost'a Yönleniyor
+### Git Deployment Sorunları
 
-Bu sorun çözülmüştür. Yapılan değişiklikler:
+#### Build Fails
+```bash
+# Coolify build logs'unu kontrol edin
+1. Dashboard > Application > Logs
+2. Build hatalarını inceleyin
+3. Dependencies ve Docker image'ları kontrol edin
+```
 
-1. **Frontend**: API URL'leri göreceli yollara çevrildi (`/api`)
-2. **Backend**: CORS ayarları tüm origin'lere izin verecek şekilde güncellendi
-3. **Nginx**: Proxy ayarları herhangi bir domain ile çalışacak şekilde yapılandırıldı
+#### Environment Variables Missing
+```bash
+# Coolify dashboard'da kontrol edin
+1. Application > Environment Variables
+2. Gerekli değişkenlerin ayarlandığından emin olun
+3. COOLIFY_FQDN otomatik ayarlanmış mı kontrol edin
+```
 
-### Build Hataları
+### Dynamic URL Sorunları
 
-Eğer build sırasında hata alırsanız:
+#### Frontend API Calls Failing
+```javascript
+// Browser console'da kontrol edin
+console.log('API URL:', window.__API_URL__);
+console.log('Coolify FQDN:', window.__COOLIFY_FQDN__);
 
-1. Node.js versiyonunu kontrol edin (18+ önerilir)
-2. Dependencies'leri temizleyip yeniden yükleyin:
-   ```bash
-   rm -rf node_modules package-lock.json
-   npm install
-   ```
+// Network tab'da API isteklerini kontrol edin
+```
 
-### Database Bağlantı Sorunları
+#### CORS Errors
+```bash
+# Backend logs'unda CORS ayarlarını kontrol edin
+# Coolify dashboard > Application > Logs > Backend
+```
 
-1. Environment variables'ların doğru ayarlandığından emin olun
-2. PostgreSQL servisinin çalıştığını kontrol edin
-3. Network ayarlarını kontrol edin
+### Database Connection Issues
 
-## Güvenlik Notları
+#### PostgreSQL Connection
+```bash
+# Container logs'unu kontrol edin
+docker logs tesvik360-postgres
 
-1. **JWT Secrets**: Production'da mutlaka güçlü, rastgele secret'lar kullanın
-2. **Database Şifreleri**: Güçlü şifreler kullanın
-3. **Email Credentials**: App password kullanın, asıl şifrenizi kullanmayın
-4. **CORS**: Gerekirse CORS ayarlarını daha kısıtlayıcı hale getirin
+# Database environment variables'ları kontrol edin
+DB_HOST=postgres  # Container name
+DB_PORT=5432
+```
 
-## Monitoring ve Logs
+#### Redis Connection
+```bash
+# Redis logs'unu kontrol edin
+docker logs tesvik360-redis
 
-Coolify otomatik olarak:
-- Application logs
+# Redis environment variables'ları kontrol edin
+REDIS_HOST=redis  # Container name
+REDIS_PORT=6379
+```
+
+## Güvenlik Best Practices
+
+### Environment Variables Security
+```env
+# Güçlü secrets kullanın
+JWT_SECRET=$(openssl rand -base64 32)
+JWT_REFRESH_SECRET=$(openssl rand -base64 32)
+
+# Database şifreleri
+DB_PASSWORD=$(openssl rand -base64 16)
+REDIS_PASSWORD=$(openssl rand -base64 16)
+```
+
+### SSL/TLS Configuration
+```bash
+# Coolify otomatik olarak sağlar:
+- Let's Encrypt SSL certificates
+- HTTP to HTTPS redirect
+- Security headers (HSTS, CSP, etc.)
+- TLS 1.2+ enforcement
+```
+
+### CORS Security
+```javascript
+// Production'da spesifik origin'ler kullanın
+CORS_ORIGIN=https://tesvik360.com,https://www.tesvik360.com
+```
+
+## Performance Optimization
+
+### Docker Image Optimization
+```dockerfile
+# Multi-stage builds kullanılıyor
+# Production images minimal boyutta
+# Layer caching optimize edilmiş
+```
+
+### Resource Limits
+```yaml
+# docker-compose.coolify.yml'de
+deploy:
+  resources:
+    limits:
+      memory: 512M
+      cpus: '0.5'
+```
+
+### Monitoring ve Alerting
+```bash
+# Coolify otomatik monitoring sağlar:
+- CPU/Memory usage
+- Disk space
+- Response times
+- Error rates
+```
 - Resource monitoring
 - Health checks
 - Backup management
