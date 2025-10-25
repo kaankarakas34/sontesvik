@@ -1,6 +1,7 @@
 {
   "version": 2,
-  "buildCommand": "ls -la && cd web && npm install && npm run build",
+  "installCommand": "ls -la",
+  "buildCommand": "cd web && npm install && npm run build",
   "outputDirectory": "web/dist",
   "framework": null
 }
