@@ -31,14 +31,14 @@ RUN chown -R nodejs:nodejs uploads
 USER nodejs
 
 # Expose the port
-EXPOSE 5000
+EXPOSE 5002
 
-# Set environment to production
-ENV NODE_ENV=production
+# Set environment to development for Docker
+ENV NODE_ENV=development
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+  CMD node -e "require('http').get('http://localhost:5002/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
 # Start the application
 CMD ["node", "src/server.js"]

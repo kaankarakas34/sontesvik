@@ -99,24 +99,33 @@ const getSectorsWithIncentives = async (req, res, next) => {
       where.isActive = isActive === 'true';
     }
 
+    // Get sectors first
     const { count, rows: sectors } = await Sector.findAndCountAll({
       where,
       limit: parseInt(limit),
       offset,
-      order: [[sortBy, sortOrder.toUpperCase()]],
-      include: [
-        {
-          model: Incentive,
-          through: { attributes: [] }, // SectorIncentive ara tablosunun verilerini dahil etme
-          attributes: ['id', 'title', 'status', 'incentiveType', 'provider']
-        }
-      ]
+      order: [[sortBy, sortOrder.toUpperCase()]]
     });
+
+    // For each sector, get its incentives using the reverse relationship
+    const sectorsWithIncentives = await Promise.all(
+      sectors.map(async (sector) => {
+        const incentives = await Incentive.findAll({
+          where: { sectorId: sector.id },
+          attributes: ['id', 'title', 'status', 'incentiveType', 'provider']
+        });
+        
+        return {
+          ...sector.toJSON(),
+          Incentives: incentives
+        };
+      })
+    );
 
     res.json({
       success: true,
       data: {
-        sectors,
+        sectors: sectorsWithIncentives,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),

@@ -79,6 +79,8 @@ console.log('Loading incentive selection routes...');
 const incentiveSelectionRoutes = require('./routes/incentiveSelectionRoutes');
 console.log('Loading documents routes...');
 const documentsRoutes = require('./routes/documents');
+console.log('Loading membership routes...');
+const membershipRoutes = require('./routes/membershipRoutes');
 
 console.log('🔧 Loading middleware...');
 const errorHandler = require('./middleware/errorHandler');
@@ -255,6 +257,7 @@ app.use('/api/logs', apl, logRoutes);
 app.use('/api/multi-incentive-applications', apl, multiIncentiveApplicationRoutes);
 app.use('/api/incentive-selection', apl, incentiveSelectionRoutes);
 app.use('/api/documents', apl, documentsRoutes);
+app.use('/api/memberships', apl, membershipRoutes);
 
 // Health check endpoints
 app.get('/health', (req, res) => {

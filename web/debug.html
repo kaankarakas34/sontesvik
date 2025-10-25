@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug LocalStorage</title>
+</head>
+<body>
+    <h1>LocalStorage Debug</h1>
+    <div id="output"></div>
+    <script>
+        const output = document.getElementById('output');
+        const token = localStorage.getItem('token');
+        const user = localStorage.getItem('user');
+        const refreshToken = localStorage.getItem('refreshToken');
+        
+        output.innerHTML = `
+            <p><strong>Token:</strong> ${token ? 'Exists' : 'Not found'}</p>
+            <p><strong>User:</strong> ${user || 'Not found'}</p>
+            <p><strong>Refresh Token:</strong> ${refreshToken ? 'Exists' : 'Not found'}</p>
+        `;
+        
+        if (user) {
+            try {
+                const userData = JSON.parse(user);
+                output.innerHTML += `<p><strong>User Role:</strong> ${userData.role || 'Not found'}</p>`;
+                output.innerHTML += `<p><strong>User Email:</strong> ${userData.email || 'Not found'}</p>`;
+                output.innerHTML += `<p><strong>Is Admin:</strong> ${userData.role === 'admin'}</p>`;
+            } catch (e) {
+                output.innerHTML += `<p><strong>Error parsing user:</strong> ${e.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+SELECT * FROM "Sectors" WHERE code = 'EXPORT';

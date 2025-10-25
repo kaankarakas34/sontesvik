@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # PostgreSQL Database
   postgres:
     image: postgres:15
     container_name: tesvik360_postgres
@@ -12,7 +13,84 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./database_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tesvik_admin -d tesvik360_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - tesvik360_network
+
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tesvik360_backend
+    environment:
+      NODE_ENV: development
+      PORT: 5002
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: tesvik360_db
+      DB_USER: tesvik_admin
+      DB_PASSWORD: tesvik123
+      JWT_SECRET: tesvik360_jwt_secret_key_2025_super_secure
+      JWT_REFRESH_SECRET: tesvik360_refresh_secret_key_2025_super_secure
+      JWT_EXPIRE: 48h
+      JWT_REFRESH_EXPIRE: 7d
+      FRONTEND_URL: http://localhost:3000
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "5002:5002"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./backend/uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - tesvik360_network
+
+  # Frontend Web Service
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.dev
+    container_name: tesvik360_web
+    environment:
+      VITE_API_BASE_URL: http://localhost:5002/api
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - tesvik360_network
+
+  # Redis Cache (Optional)
+  redis:
+    image: redis:7-alpine
+    container_name: tesvik360_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - tesvik360_network
 
 volumes:
   postgres_data:
+  redis_data:
+
+networks:
+  tesvik360_network:
+    driver: bridge

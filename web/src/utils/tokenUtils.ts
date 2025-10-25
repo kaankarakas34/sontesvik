@@ -1,5 +1,6 @@
 import { jwtDecode } from 'jwt-decode';
 import { API_CONFIG } from '../config/api.config';
+import axios from 'axios';
 
 interface JWTPayload {
   id: string;
@@ -62,24 +63,22 @@ export const checkTokenExpiry = (token: string, bufferMinutes: number = 5) => {
 export const refreshAccessToken = async (refreshToken: string): Promise<string | null> => {
   console.log('Attempting to refresh access token...');
   try {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/auth/refresh-token`, {
-      method: 'POST',
+    const response = await axios.post('/api/auth/refresh-token', {
+      refreshToken
+    }, {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ refreshToken }),
-      credentials: 'include', // Cookie'lerin gönderilmesi için kritik
+      withCredentials: true // Cookie'lerin gönderilmesi için kritik
     });
 
-    const result = await response.json();
-
-    if (response.ok && result.data?.accessToken) {
+    if (response.data?.accessToken) {
       console.log('Access token refreshed successfully.');
       // Yeni refresh token localStorage'da güncellenmez çünkü backend cookie olarak yönetiyor
-      return result.data.accessToken;
+      return response.data.accessToken;
     }
 
-    console.error('Token refresh failed:', { status: response.status, message: result.message || 'No error message' });
+    console.error('Token refresh failed:', { status: response.status, message: response.data?.message || 'No error message' });
     return null;
   } catch (error) {
     console.error('An unexpected error occurred during token refresh:', error);

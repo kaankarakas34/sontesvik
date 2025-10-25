@@ -47,14 +47,14 @@ export default defineConfig(({ mode }) => {
       __COOLIFY_FQDN__: JSON.stringify(env.COOLIFY_FQDN || ''),
     },
     server: {
-      port: 5173,
-      host: 'localhost',
-      open: true,
+      port: 3001,
+      host: '0.0.0.0',
+      open: false,
       strictPort: false,
       cors: true,
       proxy: {
         '/api': {
-          target: mode === 'production' ? apiUrl.replace('/api', '') : 'http://localhost:5002',
+          target: mode === 'production' ? apiUrl.replace('/api', '') : 'http://backend:5002',
           changeOrigin: true,
           secure: false,
         },

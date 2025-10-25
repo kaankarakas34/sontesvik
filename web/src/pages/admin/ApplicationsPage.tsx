@@ -310,7 +310,7 @@ const AdminApplicationsPage: React.FC = () => {
       title: 'İşlemler',
       key: 'actions',
       width: 100,
-      fixed: 'right',
+      fixed: 'right' as const,
       render: (_, record) => (
         <Button
           type="link"
@@ -620,17 +620,6 @@ const AdminApplicationsPage: React.FC = () => {
         .stats-card-hover:hover {
           transform: translateY(-4px);
           transition: all 0.3s ease;
-        }
-        
-        .ant-table-thead > tr > th {
-          background: #fef2f2 !important;
-          border-bottom: 2px solid #fee2e2 !important;
-          color: #1f2937 !important;
-          font-weight: 600 !important;
-        }
-        
-        .ant-table-tbody > tr:hover > td {
-          background: #fef2f2 !important;
         }
       `}</style>
     </div>
