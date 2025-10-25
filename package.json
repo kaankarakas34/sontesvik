@@ -44,7 +44,9 @@
     "health:check": "curl -f http://localhost:5002/api/health && curl -f http://localhost:5173"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   },
   "engines": {
     "node": ">=18.0.0",
