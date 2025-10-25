@@ -50,11 +50,11 @@ services:
     environment:
       NODE_ENV: production
       PORT: 5000
-      DB_HOST: postgres
+      DB_HOST: db.tgvsdybzikslodvytbbn.supabase.co
       DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-tesvik360}
-      DB_USER: ${DB_USER:-tesvik360_user}
-      DB_PASSWORD: ${DB_PASSWORD:-secure_password_123}
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASSWORD: 88./pXWcJ_%n_9_]
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password_123}

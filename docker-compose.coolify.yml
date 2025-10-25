@@ -64,11 +64,11 @@ services:
       PORT: 5000
       
       # Database Configuration
-      DB_HOST: postgres
+      DB_HOST: db.tgvsdybzikslodvytbbn.supabase.co
       DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-tesvik360}
-      DB_USER: ${DB_USER:-tesvik360_user}
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASSWORD: 88./pXWcJ_%n_9_]
       
       # Redis Configuration
       REDIS_HOST: redis
