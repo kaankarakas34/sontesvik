@@ -1,11 +1,12 @@
 {
   "version": 2,
-  "buildCommand": "npm run build --workspace=web",
-  "outputDirectory": "web/dist",
+  "rootDirectory": "web",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": null,
   "functions": {
-    "web/src/**": {
+    "src/**": {
       "runtime": "nodejs18.x"
     }
   },
