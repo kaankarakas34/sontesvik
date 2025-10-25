@@ -55,7 +55,7 @@ npm run dev
 
 #### 4. Frontend'i local'de çalıştırın
 ```bash
-cd web
+cd ../web
 
 # Bağımlılıkları yükleyin
 npm install
@@ -164,7 +164,7 @@ npm run lint
 
 ### Frontend
 ```bash
-cd web
+cd ../web
 
 # Development server'ı başlat
 npm run dev

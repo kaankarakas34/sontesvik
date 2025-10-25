@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd../web && npm run dev",
+    "dev:frontend": "cd ../web && npm run dev",
     "dev:mobile": "cd mobile && npm start",
     "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
     "start:backend": "cd backend && npm start",
@@ -29,7 +29,7 @@
     "lint:frontend": "cd ../web && npm run lint",
     "lint:fix": "npm run lint:fix:backend && npm run lint:fix:frontend",
     "lint:fix:backend": "cd backend && npm run lint:fix",
-    "lint:fix:frontend": "cd../web && npm run lint:fix",
+    "lint:fix:frontend": "cd ../web && npm run lint:fix",
     "test": "npm run test:backend && npm run test:frontend",
     "test:backend": "cd backend && npm test",
     "test:frontend": "cd ../web && npm test",

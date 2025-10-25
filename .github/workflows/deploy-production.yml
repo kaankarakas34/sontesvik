@@ -40,7 +40,7 @@ jobs:
 
       - name: Install frontend dependencies
         run: |
-          cd web
+          cd ../web
           npm ci
 
       - name: Run backend tests
@@ -50,7 +50,7 @@ jobs:
 
       - name: Build frontend
         run: |
-          cd web
+          cd ../web
           npm run build
 
   deploy:

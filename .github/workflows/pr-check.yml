@@ -28,7 +28,7 @@ jobs:
 
     - name: Install frontend dependencies
       run: |
-        cd web
+        cd ../web
         npm ci
 
     - name: Run backend linting
@@ -38,17 +38,17 @@ jobs:
 
     - name: Run frontend linting
       run: |
-        cd web
+        cd ../web
         npm run lint
 
     - name: Check code formatting (Prettier)
       run: |
-        cd web
+        cd ../web
         npm run format:check || echo "Please run 'npm run format' to fix formatting issues"
 
     - name: TypeScript type checking
       run: |
-        cd web
+        cd ../web
         npm run type-check || npx tsc --noEmit
 
   # Dependency Security Check
@@ -72,7 +72,7 @@ jobs:
 
     - name: Audit frontend dependencies
       run: |
-        cd web
+        cd ../web
         npm audit --audit-level=moderate
 
   # Build Test
@@ -97,7 +97,7 @@ jobs:
 
     - name: Test frontend build
       run: |
-        cd web
+        cd ../web
         npm ci
         npm run build
 

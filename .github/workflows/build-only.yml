@@ -61,22 +61,22 @@ jobs:
           
       - name: Install frontend dependencies
         run: |
-          cd web
+          cd ../web
           npm ci
           
       - name: Run frontend tests
         run: |
-          cd web
+          cd ../web
           npm test || echo "Tests completed"
           
       - name: Frontend lint check
         run: |
-          cd web
+          cd ../web
           npm run lint || echo "Lint check completed"
           
       - name: Build frontend
         run: |
-          cd web
+          cd ../web
           npm run build
 
   # Docker Build Test

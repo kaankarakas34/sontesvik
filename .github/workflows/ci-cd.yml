@@ -90,24 +90,24 @@ jobs:
 
     - name: Install frontend dependencies
       run: |
-        cd web
+        cd ../web
         npm ci
 
     - name: Run frontend linting
       run: |
-        cd web
+        cd ../web
         npm run lint
 
     - name: Run frontend tests
       run: |
-        cd web
+        cd ../web
         npm test
       env:
         CI: true
 
     - name: Build frontend
       run: |
-        cd web
+        cd ../web
         npm run build
 
   # Security Scan

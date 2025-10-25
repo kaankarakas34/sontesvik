@@ -67,7 +67,7 @@ psql -U postgres -d tesvik360_local -f database_schema.sql
 cp backend/.env.local backend/.env
 
 # Frontend için  
-cp web/.env.local web/.env
+cp web/.env.local../web/.env
 ```
 
 ### Servisleri Başlatın
@@ -78,7 +78,7 @@ npm install
 npm run dev
 
 # Frontend (Terminal 2)
-cd web
+cd ../web
 npm install
 npm run dev
 ```
