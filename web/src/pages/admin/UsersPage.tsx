@@ -952,20 +952,6 @@ const UsersPage: React.FC = () => {
         );
       },
     },
-        const statusConfig = {
-          paid: { color: '#059669', text: 'Ödendi', icon: '✓' },
-          pending: { color: '#f59e0b', text: 'Beklemede', icon: '⏳' },
-          overdue: { color: '#dc2626', text: 'Gecikmiş', icon: '⚠️' },
-        };
-        const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
-        
-        return (
-          <Tag color={config.color} style={{ fontWeight: '600' }}>
-            {config.icon} {config.text}
-          </Tag>
-        );
-      },
-    },
     {
       title: 'Yenileme Durumu',
       key: 'renewalStatus',
@@ -1495,20 +1481,23 @@ const UsersPage: React.FC = () => {
                     )}
                   </Card>
                 )}
-                        title={<span style={{ color: '#6b7280', fontWeight: '600' }}>Süresi Dolmuş</span>}
-                        value={memberships?.filter(m => {
-                          const daysUntilExpiry = Math.ceil((new Date(m.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                          return daysUntilExpiry < 0;
-                        }).length || 0}
-                        prefix={<StopOutlined style={{ color: '#6b7280' }} />}
-                        valueStyle={{ color: '#6b7280', fontWeight: 'bold', fontSize: '24px' }}
-                      />
-                    </Card>
-                  </Col>
-                </Row>
+                <Col xs={24} sm={12} md={6}>
+                  <Card style={modernStyles.statCard}>
+                    <Statistic
+                      title={<span style={{ color: '#6b7280', fontWeight: '600' }}>Süresi Dolmuş</span>}
+                      value={memberships?.filter(m => {
+                        const daysUntilExpiry = Math.ceil((new Date(m.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                        return daysUntilExpiry < 0;
+                      }).length || 0}
+                      prefix={<StopOutlined style={{ color: '#6b7280' }} />}
+                      valueStyle={{ color: '#6b7280', fontWeight: 'bold', fontSize: '24px' }}
+                    />
+                  </Card>
+                </Col>
+              </Row>
 
-                {/* Membership Actions */}
-                <Card style={modernStyles.filterCard}>
+              {/* Membership Actions */}
+              <Card style={modernStyles.filterCard}>
                   <Row gutter={[16, 16]} align="middle" justify="space-between">
                     <Col>
                       <Space>

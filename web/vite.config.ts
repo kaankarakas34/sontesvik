@@ -7,8 +7,13 @@ export default defineConfig(({ mode }) => {
   // Load environment variables
   const env = loadEnv(mode, process.cwd(), '')
   
-  // Coolify FQDN'den API URL'ini dinamik olarak oluştur
+  // Vercel ve Coolify için API URL'ini dinamik olarak oluştur
   const getApiUrl = () => {
+    // Vercel deployment'ta
+    if (env.VERCEL_URL) {
+      return `https://${env.VERCEL_URL}/api`
+    }
+    
     // Coolify deployment'ta COOLIFY_FQDN environment variable'ı otomatik olarak ayarlanır
     if (env.COOLIFY_FQDN) {
       return `${env.COOLIFY_FQDN}/api`
@@ -16,7 +21,7 @@ export default defineConfig(({ mode }) => {
     
     // Production environment'ta varsayılan URL
     if (mode === 'production') {
-      return 'https://app.tesvik360.com/api'
+      return '/api'
     }
     
     // Development environment'ta localhost
@@ -45,6 +50,7 @@ export default defineConfig(({ mode }) => {
     define: {
       __API_URL__: JSON.stringify(apiUrl),
       __COOLIFY_FQDN__: JSON.stringify(env.COOLIFY_FQDN || ''),
+      __VERCEL_URL__: JSON.stringify(env.VERCEL_URL || ''),
     },
     server: {
       port: 3001,

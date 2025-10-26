@@ -1,0 +1,18 @@
+# Vercel ignore file
+backend/
+mobile/
+nginx/
+scripts/
+*.md
+*.sql
+*.js
+docker-compose*.yml
+Dockerfile*
+.env.coolify
+.env.production
+pg_hba.conf
+rules
+tesvik360_deploy_key*
+uploads/
+node_modules/
+.git/
