@@ -6,5 +6,26 @@
       "use": "@vercel/static-build",
       "config": { "distDir": "dist" }
     }
-  ]
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "https://your-backend-url.com/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/web/$1"
+    }
+  ],
+  "env": {
+    "VITE_SUPABASE_URL": "https://tgvsdybzikslodvytbbn.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRndnNkeWJ6aWtzbG9kdnl0YmJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ3OTU5NzksImV4cCI6MjA1MDM3MTk3OX0.example-key",
+    "VITE_API_BASE_URL": "/api",
+    "VITE_NODE_ENV": "production"
+  },
+  "functions": {
+    "web/dist/**": {
+      "maxDuration": 10
+    }
+  }
 }
