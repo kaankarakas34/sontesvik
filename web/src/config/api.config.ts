@@ -1,31 +1,32 @@
-// API Configuration - Coolify FQDN ile dinamik yapılandırma
-const getBaseUrl = (): string => {
-  // Vite build time'da tanımlanan global değişkenler
-  if (typeof __API_URL__ !== 'undefined') {
-    return __API_URL__
+// Base URL fonksiyonu - Supabase Edge Functions için
+function getBaseUrl(): string {
+  // Öncelik: VITE_API_BASE_URL sağlandıysa onu kullan
+  const apiBase = import.meta.env.VITE_API_BASE_URL
+  if (apiBase) {
+    const normalized = apiBase.includes('/functions/v1')
+      ? apiBase
+      : `${apiBase.replace(/\/+$/, '')}/functions/v1`
+    return normalized
   }
-  
-  // Environment variable'dan al
-  if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL
+
+  // Alternatif: SUPABASE_URL verilmişse /functions/v1 ekleyerek kullan
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  if (supabaseUrl) {
+    return `${supabaseUrl.replace(/\/+$/, '')}/functions/v1`
   }
-  
-  // Coolify FQDN'den dinamik oluştur
-  if (typeof __COOLIFY_FQDN__ !== 'undefined' && __COOLIFY_FQDN__) {
-    return `${__COOLIFY_FQDN__}/api`
+
+  // Development ortamında local Supabase
+  if (import.meta.env.DEV) {
+    return 'http://localhost:54321/functions/v1'
   }
-  
-  // Production'da varsayılan URL
-  if (import.meta.env.PROD) {
-    return 'https://app.tesvik360.com/api'
-  }
-  
-  // Development'ta localhost
-  return '/api'
+
+  // Production'da env zorunlu; fallback kaldırıldı
+  console.error('[API_CONFIG] VITE_API_BASE_URL veya VITE_SUPABASE_URL tanımlı değil. Üretimde env gereklidir.')
+  return ''
 }
 
 export const API_CONFIG = {
-  // Base URL - Coolify FQDN ile dinamik olarak ayarlanır
+  // Base URL - Supabase Edge Functions
   BASE_URL: getBaseUrl(),
   
   // Timeout settings
@@ -75,121 +76,163 @@ export const DEPLOYMENT_INFO = {
   IS_COOLIFY_DEPLOYMENT: typeof __COOLIFY_FQDN__ !== 'undefined' && __COOLIFY_FQDN__ !== '',
 } as const
 
-// API Endpoints - Merkezi endpoint yönetimi
+// API Endpoints - Supabase Edge Functions için güncellendi
 export const API_ENDPOINTS = {
-  // Authentication
+  // Authentication - auth-handler Edge Function
   AUTH: {
-    LOGIN: '/auth/login',
-    REGISTER: '/auth/register',
-    LOGOUT: '/auth/logout',
-    REFRESH_TOKEN: '/auth/refresh-token',
-    FORGOT_PASSWORD: '/auth/forgot-password',
-    RESET_PASSWORD: '/auth/reset-password',
-    VERIFY_EMAIL: '/auth/verify-email',
-    RESEND_VERIFICATION: '/auth/resend-verification',
-    PROFILE: '/auth/profile',
+    LOGIN: '/auth-handler/login',
+    // REGISTER: '/auth-handler/register',
+    // LOGOUT: '/auth-handler/logout',
+    // REFRESH_TOKEN: '/auth-handler/refresh',
+    // FORGOT_PASSWORD: '/auth-handler/forgot-password',
+    // RESET_PASSWORD: '/auth-handler/reset-password',
+    // VERIFY_EMAIL: '/auth-handler/verify-email',
+    // RESEND_VERIFICATION: '/auth-handler/resend-verification',
+    // PROFILE: '/auth-handler/profile',
+    // VALIDATE_TOKEN: '/auth-handler/verify-token',
+    // CHANGE_PASSWORD: '/auth-handler/change-password',
   },
   
-  // Users
+  // Users - auth-handler Edge Function
   USERS: {
-    BASE: '/users',
-    BY_ID: (id: string) => `/users/${id}`,
-    UPDATE_PROFILE: '/users/profile',
-    CHANGE_PASSWORD: '/users/change-password',
-    UPLOAD_AVATAR: '/users/avatar',
+    // BASE: '/auth-handler/users',
+    // BY_ID: (id: string) => `/auth-handler/users/${id}`,
+    // UPDATE_PROFILE: '/auth-handler/profile',
+    // CHANGE_PASSWORD: '/auth-handler/change-password',
+    // UPLOAD_AVATAR: '/auth-handler/avatar',
   },
   
-  // Incentives
+  // Incentives - dashboard-handler Edge Function
   INCENTIVES: {
-    BASE: '/incentives',
-    BY_ID: (id: string) => `/incentives/${id}`,
-    FEATURED: '/incentives/featured',
-    SEARCH: '/incentives/search',
-    CATEGORIES: '/incentives/categories',
-    BY_CATEGORY: (categoryId: string) => `/incentives/category/${categoryId}`,
-    GUIDES: '/incentive-guides',
-    GUIDES_BY_ID: (id: string) => `/incentive-guides/${id}`,
+    BASE: '/dashboard-handler/incentives',
+    BY_ID: (id: string) => `/dashboard-handler/incentives/${id}`,
+    FEATURED: '/dashboard-handler/incentives/featured',
+    SEARCH: '/dashboard-handler/incentives/search',
+    CATEGORIES: '/dashboard-handler/categories',
+    BY_CATEGORY: (categoryId: string) => `/dashboard-handler/incentives/category/${categoryId}`,
+    GUIDES: '/dashboard-handler/guides',
+    GUIDES_BY_ID: (id: string) => `/dashboard-handler/guides/${id}`,
   },
   
-  // Applications
+  // Applications - application-handler Edge Function
   APPLICATIONS: {
-    BASE: '/applications',
-    BY_ID: (id: string) => `/applications/${id}`,
-    SUBMIT: (id: string) => `/applications/${id}/submit`,
-    CANCEL: (id: string) => `/applications/${id}/cancel`,
-    APPROVE: (id: string) => `/applications/${id}/approve`,
-    REJECT: (id: string) => `/applications/${id}/reject`,
-    STATS: '/applications/stats',
-    DOCUMENTS: (id: string) => `/applications/${id}/documents`,
-    UPLOAD_DOCUMENT: (id: string) => `/applications/${id}/documents`,
-    DOWNLOAD_DOCUMENT: (id: string, documentId: string) => `/applications/${id}/documents/${documentId}/download`,
+    BASE: '/application-handler',
+    BY_ID: (id: string) => `/application-handler/${id}`,
+    MY_APPLICATIONS: '/application-handler/my-applications',
+    SUBMIT: (id: string) => `/application-handler/${id}/submit`,
+    CANCEL: (id: string) => `/application-handler/${id}/cancel`,
+    APPROVE: (id: string) => `/application-handler/${id}/approve`,
+    REJECT: (id: string) => `/application-handler/${id}/reject`,
+    UPDATE_STATUS: (id: string) => `/application-handler/${id}/status`,
+    STATS: '/application-handler/stats',
   },
 
-  // Multi-Incentive Applications
+  // Multi-Incentive Applications - application-handler Edge Function
   MULTI_INCENTIVE_APPLICATIONS: {
-    BASE: '/multi-incentive-applications',
-    CREATE: '/multi-incentive-applications',
+    BASE: '/application-handler/multi-incentive',
+    CREATE: '/application-handler/multi-incentive',
   },
   
-  // Documents
+  // Documents - document-handler Edge Function
   DOCUMENTS: {
-    BASE: '/documents',
-    BY_ID: (id: string) => `/documents/${id}`,
-    DOWNLOAD: (id: string) => `/documents/${id}/download`,
-    UPLOAD: '/documents/upload',
+    BASE: '/document-handler',
+    BY_ID: (id: string) => `/document-handler/${id}`,
+    BY_APPLICATION: (applicationId: string) => `/document-handler/application/${applicationId}`,
+    DOWNLOAD: (id: string) => `/document-handler/${id}/download`,
+    UPLOAD: '/document-handler/upload',
   },
   
-  // Notifications
+  // Notifications - notification-handler Edge Function
   NOTIFICATIONS: {
-    BASE: '/notifications',
-    BY_ID: (id: string) => `/notifications/${id}`,
-    MARK_READ: (id: string) => `/notifications/${id}/read`,
-    MARK_ALL_READ: '/notifications/mark-all-read',
-    UNREAD_COUNT: '/notifications/unread-count',
+    BASE: '/notification-handler',
+    BY_ID: (id: string) => `/notification-handler/${id}`,
+    MARK_READ: (id: string) => `/notification-handler/${id}/read`,
+    MARK_ALL_READ: '/notification-handler/mark-all-read',
+    UNREAD_COUNT: '/notification-handler/unread-count',
+    CLEAR_ALL: '/notification-handler/clear-all',
   },
 
-  // Messages
+  // Messages - messaging-handler Edge Function
   MESSAGES: {
-    BASE: '/application-messages',
-    BY_ID: (id: string) => `/application-messages/${id}`,
-    APPLICATION: (applicationId: string) => `/application-messages/application/${applicationId}`,
-    READ: (id: string) => `/application-messages/${id}/read`,
-    UNREAD_COUNT: (applicationId: string) => `/application-messages/application/${applicationId}/unread-count`,
+    BASE: '/messaging-handler',
+    ROOMS: '/messaging-handler/rooms',
+    APPLICATION_MESSAGES: (applicationId: string) => `/messaging-handler/application/${applicationId}/messages`,
+    SEND_MESSAGE: (applicationId: string) => `/messaging-handler/application/${applicationId}/messages`,
+    MARK_READ: (messageId: string) => `/messaging-handler/messages/${messageId}/read`,
   },
   
-  // Admin
+  // Admin - admin-handler Edge Function
   ADMIN: {
-    DASHBOARD: '/admin/dashboard',
-    USERS: '/admin/users',
-    PENDING_USERS: '/auth/pending-users',
-    APPROVE_USER: (userId: string) => `/auth/approve-user/${userId}`,
-    REJECT_USER: (userId: string) => `/auth/reject-user/${userId}`,
-    APPROVAL_STATUS: '/auth/approval-status',
-    INCENTIVES: '/admin/incentives',
-    APPLICATIONS: '/admin/applications',
-    STATISTICS: '/admin/statistics',
-    SETTINGS: '/admin/settings',
-    // Archive endpoints
-    ARCHIVE_STATUS: '/admin/archive/status',
-    ARCHIVE_RUN: '/admin/archive/run',
-    ARCHIVE_START: '/admin/archive/start',
-    ARCHIVE_STOP: '/admin/archive/stop',
-    ARCHIVE_DOCUMENT_TYPE: (id: string) => `/admin/archive/document-type/${id}`,
-    RESTORE_DOCUMENTS: (id: string) => `/admin/archive/restore/${id}`,
-    ARCHIVE_TEST_MODE: '/admin/archive/test-mode',
+    DASHBOARD: '/admin-handler/system-stats',
+    USERS: '/admin-handler/users',
+    USER_BY_ID: (userId: string) => `/admin-handler/users/${userId}`,
+    UPDATE_USER_STATUS: (userId: string) => `/admin-handler/users/${userId}/status`,
+    UPDATE_USER_ROLE: (userId: string) => `/admin-handler/users/${userId}/role`,
+    CREATE_USER: '/admin-handler/users',
+    DELETE_USER: (userId: string) => `/admin-handler/users/${userId}`,
+    INCENTIVES_MANAGE: '/admin-handler/incentives/manage',
+    CREATE_INCENTIVE: '/admin-handler/incentives',
+    UPDATE_INCENTIVE: (incentiveId: string) => `/admin-handler/incentives/${incentiveId}`,
+    DELETE_INCENTIVE: (incentiveId: string) => `/admin-handler/incentives/${incentiveId}`,
+    APPLICATION_STATS: '/admin-handler/applications/stats',
+    BROADCAST_NOTIFICATION: '/admin-handler/notifications/broadcast',
+    STATISTICS: '/admin-handler/system-stats',
   },
   
-  // Sectors
+  // Sectors - dashboard-handler Edge Function
   SECTORS: {
-    BASE: '/sectors',
-    BY_ID: (id: string) => `/sectors/${id}`,
-    TREE: '/sectors/tree',
+    BASE: '/dashboard-handler/sectors',
+    BY_ID: (id: string) => `/dashboard-handler/sectors/${id}`,
+    TREE: '/dashboard-handler/sectors',
   },
   
-  // Document Types
+  // Document Types - dashboard-handler Edge Function
   DOCUMENT_TYPES: {
-    BASE: '/document-types',
-    BY_ID: (id: string) => `/document-types/${id}`,
+    BASE: '/dashboard-handler/document-types',
+    BY_ID: (id: string) => `/dashboard-handler/document-types/${id}`,
+  },
+
+  // Incentive Types - dashboard-handler Edge Function
+  INCENTIVE_TYPES: {
+    BASE: '/dashboard-handler/incentive-types',
+    BY_ID: (id: string) => `/dashboard-handler/incentive-types/${id}`,
+  },
+
+  // Incentive Guides - dashboard-handler Edge Function
+  INCENTIVE_GUIDES: {
+    BASE: '/dashboard-handler/incentive-guides',
+    BY_ID: (id: string) => `/dashboard-handler/incentive-guides/${id}`,
+    BY_INCENTIVE: (incentiveId: string) => `/dashboard-handler/incentive-guides/incentive/${incentiveId}`,
+    ADMIN_ALL: '/dashboard-handler/incentive-guides/admin/all',
+    PUBLISH: (id: string) => `/dashboard-handler/incentive-guides/${id}/publish`,
+    UNPUBLISH: (id: string) => `/dashboard-handler/incentive-guides/${id}/unpublish`,
+  },
+
+  // Document Incentive Mapping - dashboard-handler Edge Function
+  DOCUMENT_INCENTIVE_MAPPING: {
+    BASE: '/dashboard-handler/document-incentive-mapping',
+    BY_ID: (id: string) => `/dashboard-handler/document-incentive-mapping/${id}`,
+  },
+
+  // Incentive Documents - document-handler Edge Function
+  INCENTIVE_DOCUMENTS: {
+    BASE: '/document-handler/incentive-documents',
+    BY_ID: (id: string) => `/document-handler/incentive-documents/${id}`,
+    BY_INCENTIVE: (incentiveId: string) => `/document-handler/incentive-documents/incentive/${incentiveId}`,
+    BATCH_CREATE: '/document-handler/incentive-documents/batch',
+  },
+
+  // Dashboard - dashboard-handler Edge Function
+  DASHBOARD: {
+    STATS: '/dashboard-handler/stats',
+    USER_STATS: '/dashboard-handler/user-stats',
+    RECENT_APPLICATIONS: '/dashboard-handler/recent-applications',
+    RECENT_INCENTIVES: '/dashboard-handler/recent-incentives',
+    ADMIN_STATS: '/dashboard-handler/admin-stats',
+    CONSULTANT_STATS: '/dashboard-handler/consultant-stats',
+    MEMBER_STATS: '/dashboard-handler/member-stats',
+    ACTIVITIES: '/dashboard-handler/activities',
+    HEALTH: '/dashboard-handler/health',
   },
 } as const
 

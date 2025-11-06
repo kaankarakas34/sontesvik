@@ -1,4 +1,5 @@
 import { apiMethods, API_ENDPOINTS, handleApiError } from './api'
+import { supabase } from '../config/supabase.config'
 import type { User, LoginCredentials, RegisterData, ForgotPasswordData, ResetPasswordData } from '../types/auth'
 
 // Auth Service
@@ -6,23 +7,44 @@ export const authService = {
   // Login user
   async login(credentials: LoginCredentials) {
     try {
-      const response = await apiMethods.post(API_ENDPOINTS.AUTH.LOGIN, credentials)
-      const { user, token, refreshToken } = response.data
-      
-      // Store tokens in localStorage
-      if (token) {
-        localStorage.setItem('token', token)
+      const { data, error } = await supabase.auth.signInWithPassword(credentials);
+
+      if (error) {
+        throw error;
       }
-      if (refreshToken) {
-        localStorage.setItem('refreshToken', refreshToken)
+
+      if (!data.session) {
+        throw new Error('Giriş başarısız, session oluşturulamadı.');
       }
-      if (user) {
-        localStorage.setItem('user', JSON.stringify(user))
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*, role:user_roles(role)')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError) {
+        await supabase.auth.signOut();
+        throw new Error('Kullanıcı profili alınamadı. Lütfen tekrar deneyin.');
       }
-      
-      return response.data
+
+      const user = {
+        ...data.user,
+        ...profile,
+      };
+
+      localStorage.setItem('token', data.session.access_token);
+      localStorage.setItem('refreshToken', data.session.refresh_token);
+      localStorage.setItem('user', JSON.stringify(user));
+
+      return {
+        user,
+        token: data.session.access_token,
+        refreshToken: data.session.refresh_token,
+        session: data.session,
+      };
     } catch (error) {
-      throw handleApiError(error)
+      throw handleApiError(error);
     }
   },
 
@@ -60,8 +82,31 @@ export const authService = {
   // Refresh token
   async refreshToken(refreshToken: string) {
     try {
-      const response = await apiMethods.post(API_ENDPOINTS.AUTH.REFRESH_TOKEN, { refreshToken })
-      return response.data
+      // Backend expects { refresh_token }
+      const response = await apiMethods.post(API_ENDPOINTS.AUTH.REFRESH_TOKEN, { refresh_token: refreshToken })
+
+      // Normalize response and update client/session
+      const session = (response.data as any)?.session
+      let newToken: string | undefined
+      let newRefreshToken: string | undefined
+      if (session?.access_token) newToken = session.access_token
+      if (session?.refresh_token) newRefreshToken = session.refresh_token
+
+      if (newToken) localStorage.setItem('token', newToken)
+      if (newRefreshToken) localStorage.setItem('refreshToken', newRefreshToken)
+
+      if (session?.access_token && session?.refresh_token) {
+        try {
+          await supabase.auth.setSession({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+          })
+        } catch (e) {
+          console.error('Supabase setSession failed (refresh):', e)
+        }
+      }
+
+      return { ...response.data, token: newToken, refreshToken: newRefreshToken }
     } catch (error) {
       throw handleApiError(error)
     }
